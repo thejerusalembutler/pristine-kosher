@@ -1,0 +1,698 @@
+<title>Pristine Kosher — Book Your Kashering</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  /* ---------- Tokens ---------- */
+  :root{
+    --teal:#20A59F; --teal-dark:#178079; --teal-soft:#E3F4F2;
+    --ink:#0A0A0A; --paper:#FFFFFF; --mist:#F4F6F5;
+    --line:#E4E8E7; --muted:#5C6663; --orange:#F78700;
+    --card:#FFFFFF; --card-hover:#F0FAF9;
+    --shadow:0 1px 2px rgba(10,10,10,.04),0 8px 24px rgba(10,10,10,.06);
+    --radius:14px; --maxw:640px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --teal:#2FBDB6; --teal-dark:#20A59F; --teal-soft:#123330;
+      --ink:#F2F5F4; --paper:#0E1413; --mist:#0A0F0E;
+      --line:#243230; --muted:#9AA7A4; --orange:#FF9D2E;
+      --card:#141C1A; --card-hover:#182421;
+      --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="light"]{
+    --teal:#20A59F; --teal-dark:#178079; --teal-soft:#E3F4F2;
+    --ink:#0A0A0A; --paper:#FFFFFF; --mist:#F4F6F5;
+    --line:#E4E8E7; --muted:#5C6663; --orange:#F78700;
+    --card:#FFFFFF; --card-hover:#F0FAF9;
+  }
+  :root[data-theme="dark"]{
+    --teal:#2FBDB6; --teal-dark:#20A59F; --teal-soft:#123330;
+    --ink:#F2F5F4; --paper:#0E1413; --mist:#0A0F0E;
+    --line:#243230; --muted:#9AA7A4; --orange:#FF9D2E;
+    --card:#141C1A; --card-hover:#182421;
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--mist); color:var(--ink);
+    font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    -webkit-font-smoothing:antialiased; line-height:1.5; min-height:100vh;
+  }
+  .wrap{display:grid; grid-template-columns:260px 1fr; min-height:100vh}
+
+  /* ---------- Brand rail ---------- */
+  .rail{background:var(--ink); color:#fff; padding:32px 26px; display:flex; flex-direction:column; gap:30px}
+  .logo{display:flex; align-items:center; gap:12px}
+  .logo .mark{width:40px;height:40px;flex:none}
+  .logo .name{font-weight:800; letter-spacing:.14em; font-size:14px; line-height:1.15}
+  .logo .name b{display:block; color:#fff}
+  .logo .name span{display:block; color:var(--teal); font-weight:600}
+  .tagline{font-size:11px; letter-spacing:.16em; color:#7f8c8a; text-transform:uppercase; margin-top:-22px}
+  .steps{display:flex; flex-direction:column; gap:2px; margin-top:2px}
+  .steps li{list-style:none; display:flex; align-items:center; gap:12px; padding:8px 0; color:#7f8c8a; font-size:13px; transition:color .3s}
+  .chev{width:16px; height:16px; flex:none; color:#39423f; transition:color .3s, transform .3s}
+  .steps li.done{color:#c7d0ce}
+  .steps li.done .chev{color:var(--teal)}
+  .steps li.active{color:#fff; font-weight:600}
+  .steps li.active .chev{color:var(--teal); transform:translateX(2px)}
+
+  .estimate{margin-top:auto; background:#131a19; border:1px solid #222c2a; border-radius:12px; padding:16px}
+  .estimate .lbl{font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:#7f8c8a}
+  .estimate .amt{font-size:26px; font-weight:800; color:#fff; font-variant-numeric:tabular-nums; margin-top:2px}
+  .estimate .amt small{font-size:13px; font-weight:500; color:#7f8c8a}
+  .estimate .hint{font-size:10.5px; color:#6b7472; margin-top:4px; line-height:1.4}
+  .rail .trust{font-size:11px; color:#6b7472; line-height:1.6}
+  .rail .trust b{color:#c7d0ce; letter-spacing:.06em}
+
+  /* ---------- Stage ---------- */
+  .stage{display:flex; flex-direction:column}
+  .topbar{display:flex; align-items:center; justify-content:space-between; padding:20px 40px; border-bottom:1px solid var(--line); background:var(--paper)}
+  .progress-num{font-size:12px; color:var(--muted); letter-spacing:.08em; text-transform:uppercase; font-variant-numeric:tabular-nums}
+  .bar{height:4px; background:var(--line); border-radius:99px; flex:1; margin:0 20px; overflow:hidden; max-width:280px}
+  .bar > i{display:block; height:100%; width:0; background:var(--teal); border-radius:99px; transition:width .4s cubic-bezier(.4,0,.2,1)}
+  .themebtn{background:none; border:1px solid var(--line); color:var(--muted); border-radius:8px; width:34px;height:34px; cursor:pointer; font-size:15px; display:grid; place-items:center}
+  .themebtn:hover{border-color:var(--teal); color:var(--teal)}
+
+  .panel{flex:1; display:grid; place-items:center; padding:40px}
+  .card-q{width:100%; max-width:var(--maxw)}
+  .eyebrow{color:var(--teal); font-size:12px; font-weight:700; letter-spacing:.18em; text-transform:uppercase; margin:0 0 10px}
+  h1{font-size:clamp(24px,4vw,32px); font-weight:800; letter-spacing:-.01em; margin:0 0 6px; text-wrap:balance; line-height:1.15}
+  .sub{color:var(--muted); font-size:15px; margin:0 0 24px}
+
+  .opts{display:grid; gap:12px}
+  .opts.two{grid-template-columns:1fr 1fr}
+  .opts.three{grid-template-columns:repeat(3,1fr)}
+  .opt{
+    text-align:left; background:var(--card); border:1.5px solid var(--line);
+    border-radius:var(--radius); padding:18px; cursor:pointer;
+    display:flex; align-items:center; gap:14px; transition:border-color .15s, background .15s, transform .05s;
+    font-family:inherit; color:inherit; width:100%;
+  }
+  .opt:hover{border-color:var(--teal); background:var(--card-hover)}
+  .opt:active{transform:scale(.99)}
+  .opt.sel{border-color:var(--teal); background:var(--teal-soft)}
+  .opt .oicon{width:44px;height:44px;flex:none;border-radius:10px;background:var(--mist);display:grid;place-items:center;color:var(--teal);font-size:22px}
+  .opt.sel .oicon{background:var(--teal);color:#fff}
+  .opt .otxt{flex:1}
+  .opt .otxt b{display:block;font-weight:600;font-size:15.5px}
+  .opt .otxt small{color:var(--muted);font-size:13px}
+  .opt .price{font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink);font-size:15px;white-space:nowrap}
+  .opt .price small{color:var(--muted);font-weight:500;font-size:12px}
+  .opt.sel .price{color:var(--teal-dark)}
+  .opt .check{color:var(--teal);opacity:0;font-size:20px;transition:opacity .15s;margin-left:2px}
+  .opt.sel .check{opacity:1}
+  .stack{flex-direction:column;align-items:flex-start;gap:10px}
+  .stack .toprow{display:flex;align-items:center;justify-content:space-between;width:100%}
+
+  .multihint{font-size:12.5px;color:var(--muted);margin:0 0 16px;display:flex;align-items:center;gap:6px}
+
+  /* reassurance note */
+  .reassure{background:var(--teal-soft);border-radius:12px;padding:14px 16px;font-size:13.5px;color:var(--teal-dark);display:flex;gap:10px;align-items:flex-start;margin:0 0 20px;line-height:1.5}
+  .reassure b{font-weight:700}
+
+  /* time grid */
+  .timewrap{margin-top:4px}
+  .daypart{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:18px 0 10px}
+  .daypart:first-child{margin-top:0}
+  .timegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px}
+  .slot{
+    font-family:inherit;font-size:14px;font-weight:500;font-variant-numeric:tabular-nums;
+    padding:12px 6px;border:1.5px solid var(--line);border-radius:10px;background:var(--card);
+    color:var(--ink);cursor:pointer;text-align:center;transition:border-color .12s,background .12s,color .12s;
+  }
+  .slot.anchor{background:var(--teal);border-color:var(--teal);color:#fff;font-weight:700}
+  .slot.buffer{background:var(--teal-soft);border-color:var(--teal-soft);color:var(--teal-dark);font-weight:600}
+  /* hover preview (flexible only): shows what a pick would look like before committing */
+  .slot.preview-anchor{border-color:var(--teal);box-shadow:inset 0 0 0 1.5px var(--teal)}
+  .slot.preview-buffer{background:var(--teal-soft);border-color:var(--teal-soft)}
+  .slot:hover{border-color:var(--teal)}
+  .slot:disabled{opacity:.4;cursor:not-allowed}
+  .timekey{display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin:16px 0 0}
+  .timekey span{display:flex;align-items:center;gap:7px}
+  .swatch{width:14px;height:14px;border-radius:4px;flex:none}
+  .swatch.a{background:var(--teal)}
+  .swatch.b{background:var(--teal-soft);border:1px solid var(--teal)}
+
+  /* upload */
+  .upload{margin-top:16px}
+  .drop{border:1.5px dashed var(--line);border-radius:12px;padding:20px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;color:var(--muted);font-size:13.5px}
+  .drop:hover{border-color:var(--teal);background:var(--card-hover)}
+  .drop b{color:var(--ink);font-weight:600}
+  .files{list-style:none;padding:0;margin:12px 0 0;display:flex;flex-direction:column;gap:8px}
+  .files li{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 12px;font-size:13px}
+  .files .rm{margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;font-family:inherit}
+  .files .rm:hover{color:var(--orange)}
+
+  /* fields */
+  .field{margin-bottom:16px}
+  .field label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+  .field input, .field textarea{width:100%;padding:13px 14px;border:1.5px solid var(--line);border-radius:11px;font-family:inherit;font-size:15px;background:var(--card);color:inherit}
+  .field input:focus, .field textarea:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-soft)}
+  .field .err{color:var(--orange);font-size:12.5px;margin-top:5px;display:none}
+  .field.invalid .err{display:block}
+  .field.invalid input{border-color:var(--orange)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+  /* nav */
+  .nav{display:flex; align-items:center; justify-content:space-between; padding:18px 40px; border-top:1px solid var(--line); background:var(--paper); position:sticky; bottom:0}
+  .btn{font-family:inherit;font-weight:600;font-size:15px;border-radius:11px;cursor:pointer;padding:13px 26px;border:1.5px solid transparent; transition:background .15s,border-color .15s,opacity .15s}
+  .btn.primary{background:var(--teal);color:#fff}
+  .btn.primary:hover{background:var(--teal-dark)}
+  .btn.primary:disabled{opacity:.4;cursor:not-allowed}
+  .btn.ghost{background:none;color:var(--muted);border-color:var(--line)}
+  .btn.ghost:hover{border-color:var(--muted);color:var(--ink)}
+  .btn.ghost.hidden{visibility:hidden}
+  .btn.link{background:none;border:none;color:var(--muted);text-decoration:underline;padding:13px 8px}
+
+  /* review */
+  .review{display:grid;gap:8px;margin-bottom:14px}
+  .rrow{display:flex;justify-content:space-between;gap:16px;padding:12px 16px;background:var(--card);border:1px solid var(--line);border-radius:11px;font-size:14.5px}
+  .rrow .k{color:var(--muted)}
+  .rrow .v{font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
+  .rrow button{background:none;border:none;color:var(--teal);font-size:12.5px;cursor:pointer;font-family:inherit;font-weight:600;margin-left:10px}
+  .total{display:flex;justify-content:space-between;align-items:center;padding:16px;background:var(--ink);color:#fff;border-radius:12px;margin-bottom:14px}
+  .total .k{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#c7d0ce}
+  .total .v{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums}
+  .note{background:var(--teal-soft);border-radius:11px;padding:14px 16px;font-size:13.5px;color:var(--teal-dark);display:flex;gap:10px;align-items:flex-start}
+
+  .done{max-width:var(--maxw);text-align:center;display:grid;place-items:center;gap:6px}
+  .done .big{width:76px;height:76px;border-radius:50%;background:var(--teal);display:grid;place-items:center;color:#fff;margin-bottom:8px}
+
+  .anim-in{animation:slide .38s cubic-bezier(.16,1,.3,1)}
+  @keyframes slide{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.anim-in{animation:none}.bar>i{transition:none}}
+
+  @media (max-width:820px){
+    .wrap{grid-template-columns:1fr}
+    .rail{flex-direction:row; align-items:center; gap:16px; padding:14px 20px; flex-wrap:wrap}
+    .rail .steps, .rail .trust, .tagline{display:none}
+    .estimate{margin:0 0 0 auto;padding:8px 14px;display:flex;align-items:baseline;gap:8px}
+    .estimate .lbl,.estimate .hint{display:none}
+    .estimate .amt{font-size:18px}
+    .topbar,.nav,.panel{padding-left:20px;padding-right:20px}
+    .opts.three,.opts.two{grid-template-columns:1fr}
+    .row2{grid-template-columns:1fr}
+  }
+</style>
+
+<div class="wrap">
+  <aside class="rail">
+    <div>
+      <div class="logo">
+        <svg class="mark" viewBox="0 0 100 100" aria-hidden="true">
+          <rect x="8" y="14" width="40" height="72" fill="#fff"/>
+          <path d="M20 30 h14 a13 13 0 0 1 0 26 h-14 z" fill="#0A0A0A"/>
+          <rect x="20" y="30" width="6" height="26" fill="#0A0A0A"/>
+          <path d="M50 14 h22 L46 50 L72 86 H50 L28 52 z" fill="#20A59F"/>
+        </svg>
+        <div class="name"><b>PRISTINE</b><span>KOSHER</span></div>
+      </div>
+      <div class="tagline">Expanding Kosher Convenience</div>
+    </div>
+
+    <ul class="steps" id="steps"></ul>
+
+    <div class="estimate">
+      <div class="lbl">Your estimate</div>
+      <div class="amt" id="estAmt">$0</div>
+      <div class="hint">Starting price. A team member confirms the final total — nothing is charged now.</div>
+    </div>
+    <div class="trust"><b>CRC supervised.</b><br>Fully trained &amp; vetted staff.</div>
+  </aside>
+
+  <main class="stage">
+    <div class="topbar">
+      <span class="progress-num" id="pnum">Step 1</span>
+      <div class="bar"><i id="bar"></i></div>
+      <button class="themebtn" id="theme" title="Switch light / dark" aria-label="Switch theme">◑</button>
+    </div>
+    <div class="panel"><div class="card-q anim-in" id="slot"></div></div>
+    <nav class="nav">
+      <button class="btn ghost" id="back">Back</button>
+      <button class="btn primary" id="next">Continue</button>
+    </nav>
+  </main>
+</div>
+
+<script>
+/* ---------------- Pricing (single source of truth) ---------------- */
+const PRICE = {
+  counters: {small:230, medium:265, large:300},
+  sinks:    {1:100, 2:155, 3:185},
+  island:   {small:30, large:50},
+  addon:    {stovetop:50, warming:40, microwave:25, oven:10}
+};
+
+/* ---------------- State ---------------- */
+const blank = ()=>({
+  market:null,
+  base:null,              // 'counters' | 'sinks'
+  size:null,              // small/medium/large  (counters)
+  sinkCount:null,         // 1/2/3               (sinks)
+  island:null,            // null | 'small' | 'large'  (counters only)
+  addons:[],              // stovetop, warming, microwave, oven
+  media:[],               // uploaded file names
+  date:'', flex:null, time:null,   // time = "HH:MM" 24h anchor slot
+  name:'', phone:'', email:'', address:'', notes:''
+});
+let state = blank();
+let step = 0, done = false;
+
+/* ---------------- Dynamic step list ---------------- */
+function buildSteps(){
+  const s = [{id:'market',label:'Location'}, {id:'base',label:'What to kasher'}];
+  if(state.base==='counters') s.push({id:'size',label:'Kitchen size'});
+  if(state.base==='sinks')    s.push({id:'sinks',label:'How many sinks'});
+  s.push({id:'addons',label:'Add-ons'});
+  s.push({id:'when',label:'Preferred date'});
+  s.push({id:'flex',label:'Timing'});
+  s.push({id:'time',label:'Pick a time'});
+  s.push({id:'contact',label:'Your details'});
+  s.push({id:'review',label:'Review & book'});
+  return s;
+}
+let STEPS = buildSteps();
+
+/* ---------------- Content data ---------------- */
+const MARKETS = ['Lakewood, NJ','Monsey, NY','Brooklyn, NY','Miami, FL','Los Angeles, CA','Toronto, ON','Other / not sure'];
+
+/* ---------------- Helpers ---------------- */
+const $ = s => document.querySelector(s);
+const slot = $('#slot');
+const esc = x => (x||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+const cap = x => x?x.charAt(0).toUpperCase()+x.slice(1):'';
+const money = n => '$'+n;
+
+/* ---------------- Total ---------------- */
+function total(){
+  let t=0;
+  if(state.base==='counters' && state.size) t+=PRICE.counters[state.size];
+  if(state.base==='sinks' && state.sinkCount) t+=PRICE.sinks[state.sinkCount];
+  if(state.island) t+=PRICE.island[state.island];
+  state.addons.forEach(a=> t+=PRICE.addon[a]);
+  return t;
+}
+function lineItems(){
+  const items=[];
+  if(state.base==='counters' && state.size) items.push([`Counters + sinks · ${cap(state.size)}`, PRICE.counters[state.size]]);
+  if(state.base==='sinks' && state.sinkCount) items.push([`${state.sinkCount} sink${state.sinkCount>1?'s':''} only`, PRICE.sinks[state.sinkCount]]);
+  if(state.island) items.push([`${cap(state.island)} island`, PRICE.island[state.island]]);
+  const names={stovetop:'Stovetop',warming:'Warming drawer',microwave:'Microwave',oven:'Oven'};
+  state.addons.forEach(a=> items.push([names[a], PRICE.addon[a]]));
+  return items;
+}
+
+/* ---------------- Render ---------------- */
+function render(){
+  STEPS = buildSteps();
+  if(step>=STEPS.length) step=STEPS.length-1;
+  if(done){ renderDone(); return; }
+  const s = STEPS[step];
+  let html='';
+
+  if(s.id==='market'){
+    html = head('Where do we clean?','Choose your city or market. Close to a boundary? Pick “Other” — we review it, we never auto-decline.')
+      + `<div class="opts">` + MARKETS.map(m=>
+        `<button class="opt ${state.market===m?'sel':''}" data-v="${m}">
+          <div class="oicon">📍</div><div class="otxt"><b>${m}</b></div><span class="check">✓</span></button>`).join('') + `</div>`;
+  }
+
+  else if(s.id==='base'){
+    html = head('What are we kashering?','Most kitchens are counters and sinks together. Sinks only is for just the sinks.')
+      + `<div class="opts">
+          <button class="opt ${state.base==='counters'?'sel':''}" data-v="counters">
+            <div class="oicon">🍽</div>
+            <div class="otxt"><b>Counters + sinks</b><small>The full kitchen — countertops and sinks</small></div>
+            <span class="price"><small>from</small> $230</span><span class="check">✓</span>
+          </button>
+          <button class="opt ${state.base==='sinks'?'sel':''}" data-v="sinks">
+            <div class="oicon">⌾</div>
+            <div class="otxt"><b>Sinks only</b><small>Just the sink(s) — no countertops</small></div>
+            <span class="price"><small>from</small> $100</span><span class="check">✓</span>
+          </button>
+        </div>`;
+  }
+
+  else if(s.id==='size'){
+    const S=[['small','Small','$230'],['medium','Medium','$265'],['large','Large','$300']];
+    html = head('How big is your kitchen?','')
+      + `<div class="reassure">🛈 <span><b>Go with your gut.</b> The worker double-checks everything when they arrive, so a close guess is fine. Want to be sure? Add a photo or video below.</span></div>`
+      + `<div class="opts three">` + S.map(([v,t,p])=>
+        `<button class="opt stack ${state.size===v?'sel':''}" data-v="${v}">
+           <div class="toprow"><div class="oicon">${v==='small'?'▪':v==='medium'?'◼':'⬛'}</div><span class="price">${p}</span></div>
+           <div class="otxt"><b>${t}</b></div></button>`).join('') + `</div>`
+      + uploadBlock();
+  }
+
+  else if(s.id==='sinks'){
+    const S=[[1,'1 sink','$100'],[2,'2 sinks','$155'],[3,'3 sinks','$185']];
+    html = head('How many sinks?','')
+      + `<div class="reassure">🛈 <span><b>Not sure?</b> Pick your best guess — the worker confirms on arrival. You can add a photo or video below.</span></div>`
+      + `<div class="opts three">` + S.map(([v,t,p])=>
+        `<button class="opt stack ${state.sinkCount===v?'sel':''}" data-v="${v}">
+           <div class="toprow"><div class="oicon">⌾</div><span class="price">${p}</span></div>
+           <div class="otxt"><b>${t}</b></div></button>`).join('') + `</div>`
+      + uploadBlock();
+  }
+
+  else if(s.id==='addons'){
+    const A=[['stovetop','Stovetop','Kasher the cooktop','♨',50],
+             ['warming','Warming drawer','','▤',40],
+             ['microwave','Microwave','','⊡',25],
+             ['oven','Oven','','▥',10]];
+    let islandHtml='';
+    if(state.base==='counters'){
+      islandHtml = `<p class="multihint" style="margin-top:22px">Island — pick a size if you have one</p>
+        <div class="opts three">
+          <button class="opt stack ${state.island===null?'sel':''}" data-island="none">
+            <div class="toprow"><div class="oicon">—</div><span class="price">$0</span></div><div class="otxt"><b>No island</b></div></button>
+          <button class="opt stack ${state.island==='small'?'sel':''}" data-island="small">
+            <div class="toprow"><div class="oicon">▬</div><span class="price">+$30</span></div><div class="otxt"><b>Small island</b></div></button>
+          <button class="opt stack ${state.island==='large'?'sel':''}" data-island="large">
+            <div class="toprow"><div class="oicon">▭</div><span class="price">+$50</span></div><div class="otxt"><b>Large island</b></div></button>
+        </div>`;
+    }
+    html = head('Add anything else?','Optional — pick anything extra you’d like kashered.')
+      + `<p class="multihint">＋ Choose as many as you need, or skip</p>`
+      + `<div class="opts two">` + A.map(([v,t,d,i,p])=>
+        `<button class="opt ${state.addons.includes(v)?'sel':''}" data-addon="${v}">
+          <div class="oicon">${i}</div><div class="otxt"><b>${t}</b>${d?`<small>${d}</small>`:''}</div>
+          <span class="price">+$${p}</span><span class="check">☑</span></button>`).join('') + `</div>`
+      + islandHtml;
+  }
+
+  else if(s.id==='when'){
+    const today=new Date().toISOString().split('T')[0];
+    html = head('When would you like us?','Pick your preferred date — we’ll confirm the best time with you.')
+      + `<div class="field"><label for="d">Preferred date</label><input type="date" id="d" min="${today}" value="${state.date}"></div>`;
+  }
+
+  else if(s.id==='flex'){
+    const F=[['exact','Exact time','I need this specific time','◉'],
+             ['limited','Some flexibility','An hour either way is fine','◐']];
+    html = head('How firm is your time?','A locked time we protect. A flexible one lets us route the crew smarter — and sometimes get to you sooner.')
+      + `<div class="opts">` + F.map(([v,t,d,i])=>
+        `<button class="opt ${state.flex===v?'sel':''}" data-v="${v}">
+          <div class="oicon">${i}</div><div class="otxt"><b>${t}</b><small>${d}</small></div><span class="check">✓</span></button>`).join('') + `</div>`;
+  }
+
+  else if(s.id==='time'){
+    const flexible = state.flex!=='exact';
+    const dow = dayOfDate();
+    const dayName = new Date(state.date+'T00:00').toLocaleDateString(undefined,{weekday:'long'});
+    const {open,close}=HOURS[dow];
+    const hoursNote = `${dayName}: ${slotLabel(open)} – ${slotLabel(close===24*60?23*60+59:close)}`;
+    const title = flexible ? 'Pick your ideal time' : 'Pick your time';
+    const sub = flexible
+      ? 'Tap the time you’d most like. We’ll shade the hour before and after — that’s the flexibility you’re giving us to plan a smarter route.'
+      : 'Tap the slot you need. We’ll protect this time for you.';
+    html = head(title, sub)
+      + `<div class="reassure" style="margin-bottom:18px">🕒 <span>Showing times for <b>${hoursNote}</b>. Want a different day? Go back and change the date.</span></div>`
+      + timeGrid()
+      + (flexible ? `<div class="timekey">
+          <span><i class="swatch a"></i> Your ideal time</span>
+          <span><i class="swatch b"></i> You’ll allow this too</span>
+        </div>` : '');
+  }
+
+  else if(s.id==='contact'){
+    html = head('Where do we send your quote?','')
+      + `<div class="field"><label for="n">Full name</label><input id="n" value="${esc(state.name)}" placeholder="Sarah Cohen"><div class="err">Please add your name.</div></div>
+         <div class="row2">
+           <div class="field"><label for="p">Phone</label><input id="p" value="${esc(state.phone)}" placeholder="(555) 123-4567"><div class="err">Add a phone we can reach you on.</div></div>
+           <div class="field"><label for="e">Email (optional)</label><input id="e" value="${esc(state.email)}" placeholder="you@email.com"></div>
+         </div>
+         <div class="field"><label for="a">Home address</label><input id="a" value="${esc(state.address)}" placeholder="123 Main St, Apt 4"><div class="err">We need the address to plan the visit.</div></div>
+         <div class="field"><label for="nt">Notes for the team (optional)</label><textarea id="nt" rows="2" placeholder="Parking, stairs, pets, anything else…">${esc(state.notes)}</textarea></div>`;
+  }
+
+  else if(s.id==='review'){
+    const items=lineItems();
+    html = head('Look good?','Here’s your request. A team member confirms your final price and time — nothing is charged now.')
+      + `<div class="review">
+          ${rrow('Location', state.market, 'market')}
+          ${items.map(([k,v])=>`<div class="rrow"><span class="k">${k}</span><span class="v">${money(v)}</span></div>`).join('')}
+          ${rrow('Date', fmtDate(state.date), 'when')}
+          ${rrow('Time', timeSummary(), 'time')}
+          ${state.media.length?`<div class="rrow"><span class="k">Photos / video</span><span class="v">${state.media.length} attached</span></div>`:''}
+          ${rrow('Name', state.name, 'contact')}
+          ${rrow('Contact', [state.phone,state.email].filter(Boolean).join(' · '), 'contact')}
+          ${rrow('Address', state.address, 'contact')}
+        </div>
+        <div class="total"><span class="k">Estimated total</span><span class="v">${money(total())}</span></div>
+        <div class="note">🛈 <span>This is a starting estimate. A team member confirms your final price and time, and reviews any address near a service boundary — we never auto-decline.</span></div>`;
+  }
+
+  slot.className='card-q anim-in';
+  slot.innerHTML=html;
+  void slot.offsetWidth;
+  bindStep(); paintNav(); paintRail(); paintEstimate();
+}
+
+function head(t,s){return `<p class="eyebrow">${STEPS[step].label}</p><h1>${t}</h1>${s?`<p class="sub">${s}</p>`:''}`;}
+function uploadBlock(){
+  return `<div class="upload">
+    <label class="drop" for="mediaInput"><b>Add a photo or video</b> (optional) — tap to choose or drop a file here</label>
+    <input id="mediaInput" type="file" accept="image/*,video/*" multiple hidden>
+    <ul class="files" id="fileList">${state.media.map((m,i)=>`<li>📎 ${esc(m)}<button class="rm" data-rm="${i}" aria-label="Remove">✕</button></li>`).join('')}</ul>
+  </div>`;
+}
+/* ---- Service hours by weekday (0=Sun … 6=Sat) ----
+   open/close in minutes from midnight. lastStart = close - 60 (1-hour job). */
+const HOURS = {
+  0:{open:8*60,  close:23*60},   // Sunday    8:00 AM – 11:00 PM
+  1:{open:8*60,  close:23*60},   // Monday
+  2:{open:8*60,  close:23*60},   // Tuesday
+  3:{open:8*60,  close:23*60},   // Wednesday
+  4:{open:8*60,  close:23*60},   // Thursday
+  5:{open:8*60,  close:15*60},   // Friday    8:00 AM – 3:00 PM
+  6:{open:20*60+30, close:24*60} // Saturday  8:30 PM – 12:00 AM (Motzei Shabbos)
+};
+function dayOfDate(){ if(!state.date) return null; return new Date(state.date+'T00:00').getDay(); }
+
+/* slots for the chosen day, every 30 min, last start = close - 60 */
+function allSlots(){
+  const dow = dayOfDate();
+  if(dow===null) return [];
+  const {open,close}=HOURS[dow];
+  const lastStart = close-60;              // leave room for the 1-hour job
+  const out=[];
+  for(let m=open; m<=lastStart; m+=30) out.push(m);
+  return out;
+}
+function slotLabel(m){
+  let h=Math.floor(m/60), min=m%60;
+  const ampm = h>=12?'PM':'AM';
+  let hh = h%12; if(hh===0) hh=12;
+  return `${hh}:${min===0?'00':min} ${ampm}`;
+}
+function slotKey(m){ const h=Math.floor(m/60),min=m%60; return `${String(h).padStart(2,'0')}:${min===0?'00':'30'}`; }
+function fmtTime(key){ if(!key) return ''; const [h,mm]=key.split(':').map(Number); return slotLabel(h*60+mm); }
+function partOf(m){ if(m<12*60) return 'Morning'; if(m<17*60) return 'Afternoon'; return 'Evening'; }
+
+function timeGrid(){
+  const flexible = state.flex!=='exact';
+  const anchor = state.time;               // "HH:MM"
+  const anchorMin = anchor ? (()=>{const[h,mm]=anchor.split(':').map(Number);return h*60+mm;})() : null;
+  const slots = allSlots();
+  let html='<div class="timewrap">';
+  ['Morning','Afternoon','Evening'].forEach(p=>{
+    const grp = slots.filter(m=>partOf(m)===p);
+    if(!grp.length) return;
+    html += `<div class="daypart">${p}</div><div class="timegrid">`;
+    grp.forEach(m=>{
+      const key = slotKey(m);
+      let cls='slot';
+      if(anchorMin!==null){
+        if(m===anchorMin) cls+=' anchor';
+        else if(flexible && Math.abs(m-anchorMin)<=60 && m!==anchorMin) cls+=' buffer'; // ±1 hour
+      }
+      html += `<button class="${cls}" data-slot="${key}">${slotLabel(m)}</button>`;
+    });
+    html += `</div>`;
+  });
+  html += '</div>';
+  return html;
+}
+
+function rrow(k,v,goto){return `<div class="rrow"><span class="k">${k}</span><span class="v">${esc(v)||'—'}<button data-goto="${goto}">Edit</button></span></div>`;}
+function flexLabel(v){return ({exact:'Exact time',limited:'Some flexibility'})[v]||'';}
+function timeSummary(){
+  if(!state.time) return '';
+  const t = fmtTime(state.time);
+  if(state.flex==='exact') return `${t} · exact`;
+  // buffer window ±1 hour, clamped to that day's open/last-start
+  const dow = dayOfDate();
+  const {open,close}=HOURS[dow]; const lastStart=close-60;
+  const [h,mm]=state.time.split(':').map(Number); const m=h*60+mm;
+  const lo=Math.max(m-60,open), hi=Math.min(m+60,lastStart);
+  if(lo===hi) return `${t} · no earlier/later room that day`;
+  return `${t} preferred · ok ${slotLabel(lo)}–${slotLabel(hi)}`;
+}
+function fmtDate(d){if(!d)return '';const dt=new Date(d+'T00:00');return dt.toLocaleDateString(undefined,{weekday:'short',month:'long',day:'numeric',year:'numeric'});}
+
+/* ---------------- Interactions ---------------- */
+function bindStep(){
+  const s = STEPS[step];
+
+  // single-select value cards (market, base, size, sinks, flex)
+  slot.querySelectorAll('.opt[data-v]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const v = btn.dataset.v;
+      if(s.id==='sinks'){ state.sinkCount = +v; }
+      else if(s.id==='base'){
+        if(state.base!==v){ // switching base clears the other path
+          state.base=v; state.size=null; state.sinkCount=null;
+          if(v==='sinks') state.island=null; // sinks path can't have island
+        }
+      }
+      else {
+        if(s.id==='flex' && state.flex!==v) state.time=null; // clear stale time when firmness changes
+        state[s.id] = v;
+      }
+      slot.querySelectorAll('.opt[data-v]').forEach(o=>o.classList.remove('sel'));
+      btn.classList.add('sel');
+      paintNav(); paintEstimate();
+      // auto-advance for the quick single-choice steps (not size/sinks — they have uploads)
+      if(['market','base','flex'].includes(s.id)){
+        setTimeout(()=>{ if(!done) go(1); }, 240);
+      }
+    });
+  });
+
+  // island (single-select within addons step)
+  slot.querySelectorAll('.opt[data-island]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const v = btn.dataset.island;
+      state.island = (v==='none') ? null : v;
+      slot.querySelectorAll('.opt[data-island]').forEach(o=>o.classList.remove('sel'));
+      btn.classList.add('sel'); paintEstimate();
+    });
+  });
+
+  // addons (multi)
+  slot.querySelectorAll('.opt[data-addon]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const v=btn.dataset.addon; const i=state.addons.indexOf(v);
+      i>-1 ? state.addons.splice(i,1) : state.addons.push(v);
+      btn.classList.toggle('sel'); paintEstimate();
+    });
+  });
+
+  // upload
+  const mi = slot.querySelector('#mediaInput');
+  if(mi){
+    mi.addEventListener('change',e=>{
+      [...e.target.files].forEach(f=> state.media.push(f.name));
+      render();
+    });
+    slot.querySelectorAll('[data-rm]').forEach(b=>b.addEventListener('click',()=>{ state.media.splice(+b.dataset.rm,1); render(); }));
+  }
+
+  // time slots
+  const slotBtns = slot.querySelectorAll('.slot[data-slot]');
+  const flexiblePick = STEPS[step].id==='time' && state.flex!=='exact';
+  const keyToMin = k=>{const[h,mm]=k.split(':').map(Number);return h*60+mm;};
+  const clearPreview = ()=> slotBtns.forEach(b=>b.classList.remove('preview-anchor','preview-buffer'));
+
+  slotBtns.forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      state.time = btn.dataset.slot;
+      render();               // re-render so buffer shading updates around the new anchor
+    });
+    if(flexiblePick){
+      btn.addEventListener('mouseenter',()=>{
+        const hm = keyToMin(btn.dataset.slot);
+        clearPreview();
+        slotBtns.forEach(b=>{
+          const m = keyToMin(b.dataset.slot);
+          if(m===hm) b.classList.add('preview-anchor');
+          else if(Math.abs(m-hm)<=60) b.classList.add('preview-buffer'); // ±1 hour
+        });
+      });
+      btn.addEventListener('mouseleave', clearPreview);
+    }
+  });
+
+  const d=$('#d'); if(d) d.addEventListener('change',e=>{state.date=e.target.value; state.time=null; paintNav();});
+  bindField('#n','name'); bindField('#p','phone'); bindField('#e','email'); bindField('#a','address'); bindField('#nt','notes');
+  slot.querySelectorAll('[data-goto]').forEach(b=>b.addEventListener('click',()=>{ jumpTo(b.dataset.goto); }));
+}
+function bindField(sel,key){const el=slot.querySelector(sel); if(el) el.addEventListener('input',e=>{state[key]=e.target.value; el.closest('.field')?.classList.remove('invalid'); paintNav();});}
+function jumpTo(id){ const i=STEPS.findIndex(x=>x.id===id); if(i>-1){ step=i; render(); } }
+
+function stepValid(){
+  const s=STEPS[step].id;
+  if(s==='market') return !!state.market;
+  if(s==='base') return !!state.base;
+  if(s==='size') return !!state.size;
+  if(s==='sinks') return !!state.sinkCount;
+  if(s==='addons') return true;
+  if(s==='when') return !!state.date;
+  if(s==='flex') return !!state.flex;
+  if(s==='time') return !!state.time;
+  if(s==='contact') return state.name && state.phone && state.address;
+  return true;
+}
+function paintNav(){
+  $('#next').disabled = !stepValid();
+  $('#next').textContent = STEPS[step].id==='review' ? 'Confirm booking' : 'Continue';
+  $('#back').classList.toggle('hidden', step===0);
+}
+function go(dir){
+  if(dir>0){
+    if(STEPS[step].id==='contact' && !stepValid()){
+      [['#n','name'],['#p','phone'],['#a','address']].forEach(([sel,k])=>{ if(!state[k]) slot.querySelector(sel)?.closest('.field')?.classList.add('invalid'); });
+      return;
+    }
+    if(!stepValid()) return;
+    if(STEPS[step].id==='review'){ done=true; render(); return; }
+    step=Math.min(step+1,STEPS.length-1);
+  } else { step=Math.max(step-1,0); }
+  render();
+}
+$('#next').addEventListener('click',()=>go(1));
+$('#back').addEventListener('click',()=>go(-1));
+
+/* ---------------- Rail + estimate ---------------- */
+function chevSVG(){return `<svg class="chev" viewBox="0 0 24 24" fill="none"><path d="M8 5l8 7-8 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;}
+function paintRail(){
+  $('#steps').innerHTML = STEPS.map((s,i)=>`<li class="${i<step?'done':''} ${i===step&&!done?'active':''}">${chevSVG()} ${s.label}</li>`).join('');
+  const pct = done?100:Math.round(step/(STEPS.length-1)*100);
+  $('#bar').style.width = pct+'%';
+  $('#pnum').textContent = done ? 'All done' : `Step ${step+1} of ${STEPS.length}`;
+}
+function paintEstimate(){
+  const t=total();
+  $('#estAmt').innerHTML = t>0 ? `$${t}` : `$0 <small>so far</small>`;
+}
+
+/* ---------------- Done ---------------- */
+function renderDone(){
+  document.querySelector('.nav').style.display='none';
+  paintRail(); $('#steps').querySelectorAll('li').forEach(li=>li.classList.add('done'));
+  slot.className='done anim-in';
+  slot.innerHTML=`
+    <div class="big"><svg width="34" height="34" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <p class="eyebrow" style="text-align:center">Request received</p>
+    <h1>Thanks, ${esc(state.name.split(' ')[0]||'there')} — we’ve got it.</h1>
+    <p class="sub" style="max-width:460px">A Pristine Kosher team member will confirm your final price (estimate: <b>${money(total())}</b>) and time shortly. You asked for <b>${fmtTime(state.time)}</b> — ${state.flex==='exact'?'we’ll protect that exact time':'we’ll aim for that, with a little flexibility to plan a smart route'}.</p>
+    <button class="btn primary" id="again" style="margin-top:8px">Book another kitchen</button>
+    <details style="margin-top:22px;max-width:480px;width:100%;text-align:left">
+      <summary style="cursor:pointer;color:var(--muted);font-size:13px">See the booking record we created</summary>
+      <pre style="background:var(--card);border:1px solid var(--line);border-radius:11px;padding:14px;font-size:12px;overflow:auto;margin-top:10px">${esc(JSON.stringify({...state, estimate:total()},null,2))}</pre>
+    </details>`;
+  $('#again').addEventListener('click',()=>{ state=blank(); step=0; done=false; document.querySelector('.nav').style.display=''; render(); });
+}
+
+/* ---------------- Theme ---------------- */
+$('#theme').addEventListener('click',()=>{
+  const cur=document.documentElement.getAttribute('data-theme');
+  const sysDark=matchMedia('(prefers-color-scheme: dark)').matches;
+  const next=cur?(cur==='dark'?'light':'dark'):(sysDark?'light':'dark');
+  document.documentElement.setAttribute('data-theme',next);
+});
+
+render();
+</script>

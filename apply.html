@@ -1,0 +1,544 @@
+<title>Pristine Kosher — Seasonal Worker Application</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{
+    --teal:#20A59F; --teal-dark:#178079; --teal-soft:#E3F4F2;
+    --ink:#0A0A0A; --paper:#FFFFFF; --mist:#F4F6F5;
+    --line:#E4E8E7; --muted:#5C6663; --orange:#F78700; --red:#D64545;
+    --green:#2FA84F; --amber:#E8A400;
+    --card:#FFFFFF; --card-hover:#F0FAF9; --radius:14px;
+    --shadow:0 1px 2px rgba(10,10,10,.04),0 10px 30px rgba(10,10,10,.06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --teal:#2FBDB6; --teal-dark:#20A59F; --teal-soft:#123330;
+      --ink:#F2F5F4; --paper:#0E1413; --mist:#0A0F0E;
+      --line:#243230; --muted:#9AA7A4; --orange:#FF9D2E; --red:#F26D6D;
+      --green:#4FC26B; --amber:#F0BE3C;
+      --card:#141C1A; --card-hover:#182421;
+      --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 34px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="light"]{--teal:#20A59F;--teal-dark:#178079;--teal-soft:#E3F4F2;--ink:#0A0A0A;--paper:#FFFFFF;--mist:#F4F6F5;--line:#E4E8E7;--muted:#5C6663;--green:#2FA84F;--amber:#E8A400;--card:#FFFFFF;--card-hover:#F0FAF9}
+  :root[data-theme="dark"]{--teal:#2FBDB6;--teal-dark:#20A59F;--teal-soft:#123330;--ink:#F2F5F4;--paper:#0E1413;--mist:#0A0F0E;--line:#243230;--muted:#9AA7A4;--green:#4FC26B;--amber:#F0BE3C;--card:#141C1A;--card-hover:#182421}
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--mist);color:var(--ink);font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased;line-height:1.55}
+
+  /* hero */
+  .hero{background:var(--ink);color:#fff;padding:44px 24px 40px;text-align:center}
+  .hero .mark{width:60px;height:60px;margin:0 auto 18px;display:block}
+  .hero .name{font-weight:800;letter-spacing:.16em;font-size:15px}
+  .hero .name span{color:var(--teal)}
+  .hero h1{font-size:clamp(26px,5vw,36px);font-weight:800;margin:16px auto 10px;max-width:620px;text-wrap:balance;line-height:1.15}
+  .hero p{color:#b9c4c2;max-width:600px;margin:0 auto;font-size:15px}
+  .hero .tag{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--teal);margin-top:20px}
+
+  .container{max-width:720px;margin:0 auto;padding:0 20px 80px}
+
+  /* about / comp cards up top */
+  .intro{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:24px;margin:-28px 0 0;box-shadow:var(--shadow);position:relative}
+  .intro h2{font-size:17px;margin:0 0 8px;font-weight:800}
+  .intro p{margin:0 0 16px;font-size:14.5px;color:var(--muted)}
+  .comp{background:var(--teal-soft);border-radius:12px;padding:16px 18px}
+  .comp h3{margin:0 0 10px;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--teal-dark)}
+  .comp ul{margin:0;padding-left:18px;font-size:14px;color:var(--ink)}
+  .comp li{margin:4px 0}
+  .comp b{color:var(--teal-dark)}
+
+  /* sections */
+  .section{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:24px;margin-top:16px;box-shadow:var(--shadow)}
+  .snum{display:inline-flex;align-items:center;gap:10px;margin-bottom:4px}
+  .snum .num{width:26px;height:26px;border-radius:8px;background:var(--teal);color:#fff;font-size:12px;font-weight:800;display:grid;place-items:center;font-variant-numeric:tabular-nums}
+  .snum .k{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--teal)}
+  .section h2{font-size:20px;font-weight:800;margin:6px 0 4px;letter-spacing:-.01em}
+  .section .lead{color:var(--muted);font-size:14px;margin:0 0 18px}
+  .section .lead.warn{color:var(--orange);font-weight:600}
+
+  .field{margin-bottom:15px}
+  .field:last-child{margin-bottom:0}
+  .field label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+  .field .req{color:var(--red)}
+  .field input,.field select{width:100%;padding:12px 13px;border:1.5px solid var(--line);border-radius:10px;font-family:inherit;font-size:14.5px;background:var(--card);color:inherit}
+  .field input:focus,.field select:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px var(--teal-soft)}
+  .field.invalid input,.field.invalid select{border-color:var(--orange)}
+  .field .err{color:var(--orange);font-size:12px;margin-top:5px;display:none}
+  .field.invalid .err{display:block}
+  .frow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .frow3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  .subhead{font-size:13px;font-weight:700;letter-spacing:.04em;color:var(--muted);text-transform:uppercase;margin:20px 0 12px;padding-top:16px;border-top:1px solid var(--line)}
+
+  /* radios / checks */
+  .radio,.check{display:flex;align-items:flex-start;gap:11px;padding:12px 14px;border:1.5px solid var(--line);border-radius:11px;cursor:pointer;font-size:14.5px;transition:border-color .12s,background .12s;margin-bottom:8px}
+  .radio:hover,.check:hover{border-color:var(--teal);background:var(--card-hover)}
+  .radio input,.check input{margin-top:2px;accent-color:var(--teal);width:17px;height:17px;flex:none}
+  .radio.sel,.check.sel{border-color:var(--teal);background:var(--teal-soft)}
+  .radioset{display:flex;gap:10px}
+  .radioset .radio{flex:1;margin-bottom:0}
+  .ack{font-size:14px}
+
+  /* calendar */
+  .calnote{background:var(--mist);border-radius:11px;padding:14px 16px;font-size:13.5px;margin-bottom:16px;display:flex;gap:10px}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--muted);margin-bottom:14px}
+  .legend span{display:flex;align-items:center;gap:6px}
+  .dot{width:13px;height:13px;border-radius:50%;flex:none;border:1px solid var(--line)}
+  .dot.g{background:var(--green)} .dot.y{background:var(--amber)} .dot.u{background:var(--mist)}
+  .weekhead{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px}
+  .weekhead div{text-align:center;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.04em}
+  .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+  .day{border:1.5px solid var(--line);border-radius:10px;background:var(--card);padding:8px 4px 10px;text-align:center;cursor:pointer;min-height:64px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;transition:border-color .12s,background .12s;font-family:inherit;color:inherit}
+  .day.pad{border:none;background:none;cursor:default}
+  .day .dnum{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
+  .day .dmon{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+  .day .state{width:16px;height:16px;border-radius:50%;border:1px solid var(--line)}
+  .day.full{background:color-mix(in srgb,var(--green) 16%,transparent);border-color:var(--green)}
+  .day.full .state{background:var(--green);border-color:var(--green)}
+  .day.part{background:color-mix(in srgb,var(--amber) 16%,transparent);border-color:var(--amber)}
+  .day.part .state{background:var(--amber);border-color:var(--amber)}
+  .parttimes{display:none;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;padding:12px;background:var(--mist);border-radius:10px}
+  .parttimes.show{display:grid}
+  .parttimes .field{margin:0}
+  .parttimes .plabel{grid-column:1/-1;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:-4px}
+
+  .avstats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px}
+  .avstat{background:var(--teal-soft);border-radius:11px;padding:14px;text-align:center}
+  .avstat .n{font-size:24px;font-weight:800;color:var(--teal-dark);font-variant-numeric:tabular-nums}
+  .avstat .l{font-size:11.5px;color:var(--teal-dark);margin-top:2px}
+  .priority{margin-top:14px;background:var(--card);border:1px solid var(--orange);border-radius:11px;padding:13px 15px;font-size:13px;color:var(--muted);display:flex;gap:10px}
+  .priority b{color:var(--ink)}
+
+  /* upload (intent only) */
+  .drop{border:1.5px dashed var(--line);border-radius:12px;padding:22px;text-align:center;cursor:pointer;color:var(--muted);font-size:13.5px;transition:border-color .12s,background .12s}
+  .drop:hover{border-color:var(--teal);background:var(--card-hover)}
+  .drop b{color:var(--ink)}
+  .fname{margin-top:10px;font-size:13.5px;display:none;align-items:center;gap:8px}
+  .fname.show{display:flex}
+  .fname .rm{background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px}
+
+  .sig{display:grid;grid-template-columns:2fr 1fr;gap:12px}
+
+  /* submit */
+  .submitbar{margin-top:22px}
+  .btn{font-family:inherit;font-weight:700;font-size:16px;border-radius:12px;cursor:pointer;padding:16px 28px;border:none;background:var(--teal);color:#fff;width:100%;transition:background .15s,opacity .15s}
+  .btn:hover{background:var(--teal-dark)}
+  .formnote{text-align:center;font-size:12.5px;color:var(--muted);margin-top:12px}
+
+  .themebtn{position:fixed;top:16px;right:16px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:8px;width:36px;height:36px;cursor:pointer;font-size:15px;z-index:5}
+
+  /* success */
+  .success{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:40px 28px;text-align:center;box-shadow:var(--shadow);margin-top:16px}
+  .success .big{width:76px;height:76px;border-radius:50%;background:var(--teal);display:grid;place-items:center;margin:0 auto 16px}
+  .success h2{font-size:24px;font-weight:800;margin:0 0 8px}
+  .success p{color:var(--muted);max-width:440px;margin:0 auto 8px}
+  .success .pending{display:inline-block;margin-top:14px;background:var(--teal-soft);color:var(--teal-dark);font-weight:700;font-size:13px;padding:6px 14px;border-radius:99px;letter-spacing:.04em}
+
+  @media (max-width:560px){
+    .frow,.frow3,.sig{grid-template-columns:1fr}
+    .intro{padding:20px}.section{padding:20px}
+    .avstats{grid-template-columns:1fr}
+    .day{min-height:56px}
+  }
+</style>
+
+<button class="themebtn" id="theme" title="Switch light / dark" aria-label="Switch theme">◑</button>
+
+<div class="hero">
+  <svg class="mark" viewBox="0 0 100 100" aria-hidden="true">
+    <rect x="8" y="14" width="40" height="72" fill="#fff"/>
+    <path d="M20 30 h14 a13 13 0 0 1 0 26 h-14 z" fill="#0A0A0A"/>
+    <rect x="20" y="30" width="6" height="26" fill="#0A0A0A"/>
+    <path d="M50 14 h22 L46 50 L72 86 H50 L28 52 z" fill="#20A59F"/>
+  </svg>
+  <div class="name">PRISTINE <span>KOSHER</span></div>
+  <h1>Seasonal Worker Application</h1>
+  <p>Join our team for the Pesach 2027 season. Help families prepare their kitchens according to halachic standards.</p>
+  <div class="tag">Expanding Kosher Convenience</div>
+</div>
+
+<form class="container" id="app" novalidate>
+  <!-- Intro -->
+  <div class="intro">
+    <h2>About the position</h2>
+    <p>Pristine Kosher is one of the largest kosher kitchen kashering companies in North America. During the three weeks leading up to Pesach, our teams help families prepare their kitchens. This is a fast-paced, physically active role that requires professionalism, punctuality, and excellent customer service. You’ll be working inside customers’ homes and are expected to represent Pristine Kosher professionally at all times.</p>
+    <div class="comp">
+      <h3>Compensation</h3>
+      <ul>
+        <li><b>Kitchen work:</b> $30.00/hour</li>
+        <li><b>Driving time between jobs:</b> $25.00/hour (tracked separately)</li>
+        <li>Gas and tolls are reimbursed</li>
+        <li>Workers log their hours every day</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 1 Personal -->
+  <div class="section">
+    <div class="snum"><span class="num">1</span><span class="k">Personal information</span></div>
+    <h2>Tell us about yourself</h2>
+    <div class="field" data-req><label>Full name <span class="req">*</span></label><input id="fullName" autocomplete="name"><div class="err">Please enter your name.</div></div>
+    <div class="frow">
+      <div class="field" data-req><label>Date of birth <span class="req">*</span></label><input id="dob" type="date"><div class="err">Please enter your date of birth.</div></div>
+      <div class="field"><label>Age</label><input id="age" readonly placeholder="—" style="background:var(--mist)"></div>
+    </div>
+    <div class="frow">
+      <div class="field" data-req><label>Phone number <span class="req">*</span></label><input id="phone" type="tel" placeholder="(555) 123-4567"><div class="err">Please enter a phone number.</div></div>
+      <div class="field" data-req><label>Email <span class="req">*</span></label><input id="email" type="email" placeholder="you@email.com"><div class="err">Please enter a valid email.</div></div>
+    </div>
+    <div class="field" data-req><label>Home address <span class="req">*</span></label><input id="address" autocomplete="street-address"><div class="err">Please enter your address.</div></div>
+
+    <div class="subhead">Emergency contact</div>
+    <div class="frow3">
+      <div class="field"><label>Name</label><input id="ecName"></div>
+      <div class="field"><label>Relationship</label><input id="ecRel"></div>
+      <div class="field"><label>Phone</label><input id="ecPhone" type="tel"></div>
+    </div>
+  </div>
+
+  <!-- 2 Work area -->
+  <div class="section">
+    <div class="snum"><span class="num">2</span><span class="k">Work area</span></div>
+    <h2>Which area would you like to work in?</h2>
+    <div class="field" data-req>
+      <label>Preferred market <span class="req">*</span></label>
+      <select id="market">
+        <option value="">Choose an area…</option>
+      </select>
+      <div class="err">Please pick an area.</div>
+    </div>
+  </div>
+
+  <!-- 3 Transportation -->
+  <div class="section">
+    <div class="snum"><span class="num">3</span><span class="k">Transportation</span></div>
+    <h2>Getting to jobs</h2>
+    <p class="lead warn">Reliable transportation is required. Pristine Kosher does NOT provide transportation.</p>
+    <label style="font-size:13px;font-weight:600;display:block;margin-bottom:8px">Do you have reliable access to a car during the Pesach season? <span class="req">*</span></label>
+    <div class="radioset" data-radio="car" data-req>
+      <label class="radio"><input type="radio" name="car" value="yes"><span>Yes</span></label>
+      <label class="radio"><input type="radio" name="car" value="no"><span>No</span></label>
+    </div>
+    <div class="err" id="carErr" style="color:var(--orange);font-size:12px;margin-top:5px;display:none">Please answer this question.</div>
+    <label class="check ack" style="margin-top:12px" data-ack><input type="checkbox" id="ackTransport"><span>I understand that I am responsible for my own transportation to and from jobs.</span></label>
+  </div>
+
+  <!-- 4 Communication -->
+  <div class="section">
+    <div class="snum"><span class="num">4</span><span class="k">Communication</span></div>
+    <h2>How should we reach you?</h2>
+    <div class="radioset" data-radio="comm" data-req>
+      <label class="radio"><input type="radio" name="comm" value="whatsapp"><span>WhatsApp</span></label>
+      <label class="radio"><input type="radio" name="comm" value="sms"><span>SMS text</span></label>
+    </div>
+    <div class="err" id="commErr" style="color:var(--orange);font-size:12px;margin-top:5px;display:none">Please pick one.</div>
+  </div>
+
+  <!-- 5 Background -->
+  <div class="section">
+    <div class="snum"><span class="num">5</span><span class="k">Background</span></div>
+    <h2>A little history</h2>
+    <div class="field"><label>Which yeshiva do you attend?</label><input id="yeshiva"></div>
+    <label style="font-size:13px;font-weight:600;display:block;margin:6px 0 8px">Have you worked for Pristine Kosher before?</label>
+    <div class="radioset" data-radio="returning">
+      <label class="radio"><input type="radio" name="returning" value="yes"><span>Yes</span></label>
+      <label class="radio"><input type="radio" name="returning" value="no"><span>No</span></label>
+    </div>
+    <div class="field" id="yearsField" style="display:none;margin-top:12px"><label>What years?</label><input id="years" placeholder="e.g. 2024, 2025"></div>
+  </div>
+
+  <!-- 6 Availability -->
+  <div class="section">
+    <div class="snum"><span class="num">6</span><span class="k">Availability — most important</span></div>
+    <h2>When can you work?</h2>
+    <div class="calnote">🗓️ <span>Tap each day to set your availability for the three weeks before Pesach 2027. Tap again to cycle: <b>Unavailable → Full day → Part day</b>.</span></div>
+    <div class="legend">
+      <span><i class="dot g"></i> Available — full day</span>
+      <span><i class="dot y"></i> Available — part day</span>
+      <span><i class="dot u"></i> Unavailable</span>
+    </div>
+    <div class="weekhead"><div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div></div>
+    <div class="cal" id="cal"></div>
+
+    <div class="avstats">
+      <div class="avstat"><div class="n" id="avFull">0</div><div class="l">Full days available</div></div>
+      <div class="avstat"><div class="n" id="avPart">0</div><div class="l">Partial days available</div></div>
+      <div class="avstat"><div class="n" id="avHours">0</div><div class="l">Estimated hours</div></div>
+    </div>
+    <div class="priority">⚡ <span><b>Applicants with greater availability during the busy season receive scheduling priority.</b> Employment is contingent upon providing sufficient availability to meet staffing needs.</span></div>
+  </div>
+
+  <!-- 7 Photo -->
+  <div class="section">
+    <div class="snum"><span class="num">7</span><span class="k">Photo</span></div>
+    <h2>Upload a recent photo</h2>
+    <p class="lead">Please upload one recent full-body photo of yourself. Accepted: JPG, PNG, HEIC.</p>
+    <label class="drop" for="photo"><b>Tap to choose a photo</b> or drop a file here</label>
+    <input id="photo" type="file" accept=".jpg,.jpeg,.png,.heic,image/*" hidden>
+    <div class="fname" id="photoName"></div>
+  </div>
+
+  <!-- 8 Payroll -->
+  <div class="section">
+    <div class="snum"><span class="num">8</span><span class="k">Payroll</span></div>
+    <h2>Pay structure</h2>
+    <div class="comp" style="margin-bottom:16px">
+      <ul>
+        <li>Kitchen work is paid at <b>$30/hour</b></li>
+        <li>Driving time is paid at <b>$25/hour</b> — logged separately</li>
+        <li>Gas and tolls are reimbursed</li>
+        <li>Workers must accurately log all hours worked</li>
+      </ul>
+    </div>
+    <label class="check ack" data-ack><input type="checkbox" id="ackPay"><span>I understand and agree to the compensation structure.</span></label>
+  </div>
+
+  <!-- 9 Tax -->
+  <div class="section">
+    <div class="snum"><span class="num">9</span><span class="k">Tax forms</span></div>
+    <h2>W-9 required</h2>
+    <p class="lead">All workers must complete an IRS Form W-9 before beginning work. This lets Pristine Kosher issue a 1099 tax form at year-end.</p>
+    <label class="check ack" data-ack><input type="checkbox" id="ackW9"><span>I agree to complete the required W-9 paperwork before beginning work.</span></label>
+  </div>
+
+  <!-- 10 Time tracking -->
+  <div class="section">
+    <div class="snum"><span class="num">10</span><span class="k">Daily time tracking</span></div>
+    <h2>Logging your hours</h2>
+    <p class="lead">Every worker submits their hours daily. Each day’s log includes: start time, end time, kitchen work hours, driving hours, gas expenses, toll expenses, and optional notes.</p>
+    <label class="check ack" data-ack><input type="checkbox" id="ackLog"><span>I understand that daily time logs are required.</span></label>
+  </div>
+
+  <!-- 11 Expectations -->
+  <div class="section">
+    <div class="snum"><span class="num">11</span><span class="k">Worker expectations</span></div>
+    <h2>Please acknowledge</h2>
+    <div id="expectations"></div>
+  </div>
+
+  <!-- 12 Final -->
+  <div class="section">
+    <div class="snum"><span class="num">12</span><span class="k">Final agreement</span></div>
+    <h2>Certification</h2>
+    <label class="check ack" data-ack><input type="checkbox" id="ackAccurate"><span>I certify that all information provided is accurate.</span></label>
+    <label class="check ack" data-ack><input type="checkbox" id="ackNoGuarantee"><span>I understand that submitting this application does not guarantee employment.</span></label>
+    <label class="check ack" data-ack><input type="checkbox" id="ackPolicies"><span>If hired, I agree to follow all Pristine Kosher policies and procedures.</span></label>
+    <div class="sig" style="margin-top:16px">
+      <div class="field" data-req><label>Electronic signature (type your full name) <span class="req">*</span></label><input id="signature" placeholder="Your full name"><div class="err">Please sign by typing your name.</div></div>
+      <div class="field"><label>Date</label><input id="sigDate" readonly style="background:var(--mist)"></div>
+    </div>
+
+    <div class="submitbar">
+      <button type="submit" class="btn">Submit application</button>
+      <div class="formnote">Fields marked <span style="color:var(--red)">*</span> are required. We’ll review your availability and be in touch.</div>
+    </div>
+  </div>
+</form>
+
+<div class="container" id="successWrap" style="display:none">
+  <div class="success">
+    <div class="big"><svg width="34" height="34" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <h2>Application received!</h2>
+    <p id="successMsg">Thank you. We’ve got your application and will review your availability for the busiest days before Pesach.</p>
+    <div class="pending">Status: Pending review</div>
+    <div style="margin-top:24px"><details style="text-align:left"><summary style="cursor:pointer;color:var(--muted);font-size:13px">See the worker profile we created</summary><pre id="dump" style="background:var(--mist);border:1px solid var(--line);border-radius:11px;padding:14px;font-size:12px;overflow:auto;margin-top:10px"></pre></details></div>
+  </div>
+</div>
+
+<script>
+/* ---------------- Config ---------------- */
+const MARKETS = ['Toronto','Cleveland','Detroit','Chicago','Muncie','North Jersey','Lakewood','Brooklyn','Five Towns','Queens','Baltimore','Silver Spring','Atlanta','South Florida','Orlando','Los Angeles'];
+const EXPECTATIONS = [
+  'I will arrive on time.',
+  'I will treat every customer’s home with respect.',
+  'I will communicate professionally with customers and coworkers.',
+  'I understand this is physically demanding work.',
+  'I will follow instructions from my team leader.',
+  'I understand that poor attendance or repeated lateness may affect future scheduling.'
+];
+/* Pesach 2027 begins evening of Tue Apr 20, 2027 → 3 weeks before: Mar 31 – Apr 20 */
+const CAL_START = new Date(2027,2,31);   // Mar 31 2027
+const CAL_END   = new Date(2027,3,20);   // Apr 20 2027
+const FULL_DAY_HOURS = 8;
+const PART_DAY_HOURS_DEFAULT = 4;
+
+const $ = s => document.querySelector(s);
+const esc = x => (x||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+
+/* ---------------- Populate lists ---------------- */
+MARKETS.forEach(m=>{ const o=document.createElement('option'); o.value=m; o.textContent=m; $('#market').appendChild(o); });
+$('#expectations').innerHTML = EXPECTATIONS.map((t,i)=>
+  `<label class="check ack" data-ack data-exp><input type="checkbox" data-expi="${i}"><span>${t}</span></label>`).join('');
+$('#sigDate').value = new Date().toLocaleDateString();
+
+/* ---------------- Age auto-calc ---------------- */
+$('#dob').addEventListener('change',()=>{
+  const d=new Date($('#dob').value); if(isNaN(d)){$('#age').value='';return;}
+  const now=new Date(); let a=now.getFullYear()-d.getFullYear();
+  const mm=now.getMonth()-d.getMonth(); if(mm<0||(mm===0&&now.getDate()<d.getDate())) a--;
+  $('#age').value = a>=0 && a<120 ? a : '';
+});
+
+/* ---------------- Returning worker → years ---------------- */
+document.querySelectorAll('input[name="returning"]').forEach(r=>r.addEventListener('change',()=>{
+  $('#yearsField').style.display = ($('input[name="returning"]:checked')||{}).value==='yes' ? 'block':'none';
+}));
+
+/* ---------------- Radio card selected styling ---------------- */
+document.querySelectorAll('.radioset').forEach(set=>{
+  set.querySelectorAll('input[type="radio"]').forEach(r=>r.addEventListener('change',()=>{
+    set.querySelectorAll('.radio').forEach(l=>l.classList.remove('sel'));
+    r.closest('.radio').classList.add('sel');
+  }));
+});
+/* checkbox card styling */
+document.addEventListener('change',e=>{
+  if(e.target.matches('.check input[type="checkbox"]')) e.target.closest('.check').classList.toggle('sel',e.target.checked);
+});
+
+/* ---------------- Photo (intent only — filename) ---------------- */
+$('#photo').addEventListener('change',e=>{
+  const f=e.target.files[0]; const box=$('#photoName');
+  if(f){ box.className='fname show'; box.innerHTML=`📎 ${esc(f.name)} <button type="button" class="rm" id="rmPhoto" aria-label="Remove">✕</button>`;
+    $('#rmPhoto').addEventListener('click',()=>{ $('#photo').value=''; box.className='fname'; box.innerHTML=''; }); }
+});
+
+/* ---------------- Availability calendar ---------------- */
+const avail = {};   // "YYYY-MM-DD": {state:'none'|'full'|'part', start:'', end:''}
+function ymd(d){return d.toISOString().split('T')[0];}
+function buildCal(){
+  const cal=$('#cal'); cal.innerHTML='';
+  // pad to weekday of start
+  const startPad = new Date(CAL_START).getDay();
+  for(let i=0;i<startPad;i++){ const p=document.createElement('div'); p.className='day pad'; cal.appendChild(p); }
+  for(let d=new Date(CAL_START); d<=CAL_END; d.setDate(d.getDate()+1)){
+    const key=ymd(d);
+    avail[key]=avail[key]||{state:'none',start:'09:00',end:'13:00'};
+    const cell=document.createElement('button');
+    cell.type='button'; cell.className='day'; cell.dataset.key=key;
+    cell.innerHTML=`<span class="dmon">${d.toLocaleDateString(undefined,{month:'short'})}</span><span class="dnum">${d.getDate()}</span><span class="state"></span>`;
+    cell.addEventListener('click',()=>cycle(key));
+    cal.appendChild(cell);
+  }
+  paintCal();
+}
+function cycle(key){
+  const order=['none','full','part'];
+  avail[key].state = order[(order.indexOf(avail[key].state)+1)%3];
+  paintCal();
+}
+function paintCal(){
+  document.querySelectorAll('.day[data-key]').forEach(cell=>{
+    const a=avail[cell.dataset.key];
+    cell.classList.remove('full','part');
+    if(a.state==='full') cell.classList.add('full');
+    if(a.state==='part') cell.classList.add('part');
+    // part-day time inputs
+    let pt=cell.querySelector('.parttimes');
+    if(a.state==='part'){
+      if(!pt){
+        pt=document.createElement('div'); pt.className='parttimes show';
+        pt.innerHTML=`<div class="plabel">Part-day hours for ${new Date(cell.dataset.key+'T00:00').toLocaleDateString(undefined,{month:'short',day:'numeric'})}</div>
+          <div class="field"><label style="font-size:11px">Start</label><input type="time" data-t="start" value="${a.start}"></div>
+          <div class="field"><label style="font-size:11px">End</label><input type="time" data-t="end" value="${a.end}"></div>`;
+        // place it after the calendar grid, tied to this day — simpler: append inline below cell is messy in grid; use a shared editor
+      }
+    }
+  });
+  renderPartEditors();
+  updateTotals();
+}
+
+/* Part-day editors live in one panel under the calendar (cleaner than inside grid cells) */
+function renderPartEditors(){
+  let panel=$('#partPanel');
+  const partKeys=Object.keys(avail).filter(k=>avail[k].state==='part').sort();
+  if(!panel){
+    panel=document.createElement('div'); panel.id='partPanel'; panel.style.marginTop='16px';
+    $('#cal').after(panel);
+  }
+  if(!partKeys.length){ panel.innerHTML=''; return; }
+  panel.innerHTML = `<div class="subhead" style="border-top:none;padding-top:0">Part-day hours</div>` + partKeys.map(k=>{
+    const a=avail[k]; const label=new Date(k+'T00:00').toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
+    return `<div class="parttimes show" style="margin-bottom:8px">
+      <div class="plabel">${label}</div>
+      <div class="field"><label style="font-size:11px">Start</label><input type="time" data-key="${k}" data-t="start" value="${a.start}"></div>
+      <div class="field"><label style="font-size:11px">End</label><input type="time" data-key="${k}" data-t="end" value="${a.end}"></div>
+    </div>`;
+  }).join('');
+  panel.querySelectorAll('input[type="time"]').forEach(inp=>inp.addEventListener('change',()=>{
+    avail[inp.dataset.key][inp.dataset.t]=inp.value; updateTotals();
+  }));
+}
+function partHours(a){
+  if(!a.start||!a.end) return PART_DAY_HOURS_DEFAULT;
+  const [sh,sm]=a.start.split(':').map(Number),[eh,em]=a.end.split(':').map(Number);
+  const h=((eh*60+em)-(sh*60+sm))/60; return h>0?h:0;
+}
+function updateTotals(){
+  let full=0,part=0,hours=0;
+  Object.values(avail).forEach(a=>{
+    if(a.state==='full'){ full++; hours+=FULL_DAY_HOURS; }
+    else if(a.state==='part'){ part++; hours+=partHours(a); }
+  });
+  $('#avFull').textContent=full; $('#avPart').textContent=part; $('#avHours').textContent=Math.round(hours);
+}
+buildCal();
+
+/* ---------------- Validation + submit ---------------- */
+function clearErr(){ document.querySelectorAll('.field.invalid').forEach(f=>f.classList.remove('invalid')); $('#carErr').style.display='none'; $('#commErr').style.display='none'; }
+$('#app').addEventListener('submit',e=>{
+  e.preventDefault(); clearErr();
+  let ok=true, firstBad=null;
+
+  // required text/select fields
+  document.querySelectorAll('.field[data-req]').forEach(f=>{
+    const inp=f.querySelector('input,select');
+    let bad=!inp.value.trim();
+    if(inp.type==='email' && inp.value && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(inp.value)) bad=true;
+    if(bad){ f.classList.add('invalid'); ok=false; firstBad=firstBad||f; }
+  });
+  // required radios
+  if(!document.querySelector('input[name="car"]:checked')){ $('#carErr').style.display='block'; ok=false; firstBad=firstBad||$('#carErr'); }
+  if(!document.querySelector('input[name="comm"]:checked')){ $('#commErr').style.display='block'; ok=false; firstBad=firstBad||$('#commErr'); }
+
+  // required acknowledgments (all data-ack checkboxes must be checked)
+  let missingAck=false;
+  document.querySelectorAll('.check[data-ack] input[type="checkbox"]').forEach(c=>{ if(!c.checked){ c.closest('.check').style.borderColor='var(--orange)'; missingAck=true; } else c.closest('.check').style.borderColor=''; });
+  if(missingAck){ ok=false; firstBad=firstBad||document.querySelector('.check[data-ack] input:not(:checked)').closest('.check'); }
+
+  if(!ok){ firstBad&&firstBad.scrollIntoView({behavior:'smooth',block:'center'}); return; }
+
+  // build worker profile record
+  const profile = {
+    status:'Pending',
+    submittedAt:new Date().toISOString(),
+    personal:{ fullName:$('#fullName').value.trim(), dob:$('#dob').value, age:$('#age').value, phone:$('#phone').value.trim(), email:$('#email').value.trim(), address:$('#address').value.trim() },
+    emergency:{ name:$('#ecName').value.trim(), relationship:$('#ecRel').value.trim(), phone:$('#ecPhone').value.trim() },
+    market:$('#market').value,
+    hasCar:(document.querySelector('input[name="car"]:checked')||{}).value,
+    communication:(document.querySelector('input[name="comm"]:checked')||{}).value,
+    yeshiva:$('#yeshiva').value.trim(),
+    returning:(document.querySelector('input[name="returning"]:checked')||{}).value||'no',
+    priorYears:$('#years').value.trim(),
+    photo:($('#photo').files[0]||{}).name||null,
+    w9Agreed:$('#ackW9').checked,
+    availability:Object.fromEntries(Object.entries(avail).filter(([,a])=>a.state!=='none')),
+    availabilitySummary:{ fullDays:+$('#avFull').textContent, partDays:+$('#avPart').textContent, estHours:+$('#avHours').textContent },
+    signature:$('#signature').value.trim(),
+    signedDate:$('#sigDate').value
+  };
+
+  $('#app').style.display='none';
+  $('#successWrap').style.display='block';
+  $('#successMsg').textContent = `Thank you, ${profile.personal.fullName.split(' ')[0]||'there'}. We’ve got your application for ${profile.market} and will review your availability (${profile.availabilitySummary.estHours} estimated hours) for the busiest days before Pesach.`;
+  $('#dump').textContent = JSON.stringify(profile,null,2);
+  window.scrollTo({top:0,behavior:'smooth'});
+});
+
+/* theme */
+$('#theme').addEventListener('click',()=>{
+  const cur=document.documentElement.getAttribute('data-theme');
+  const sysDark=matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.setAttribute('data-theme', cur?(cur==='dark'?'light':'dark'):(sysDark?'light':'dark'));
+});
+</script>
