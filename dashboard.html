@@ -206,6 +206,15 @@
       <div class="rows" id="applications"></div>
     </div>
   </div>
+
+  <!-- Worker roll-up: hours + cash on hand -->
+  <div class="panel" style="margin-top:20px">
+    <div class="phead">
+      <h2>Worker totals</h2><span class="count" id="wrCount">0</span>
+      <div style="margin-left:auto;font-size:12px;color:var(--muted)">Hours worked &amp; cash they’re holding</div>
+    </div>
+    <div class="rows" id="workerRollup"><div class="empty">Loading worker totals…</div></div>
+  </div>
 </div>
 
 <!-- Drawer -->
@@ -244,7 +253,8 @@ function fromDb(r){
     address: r.address || '',
     notes: r.notes || '',
     assignedWorkerId: r.assigned_worker_id || null,
-    lat: r.lat, lng: r.lng
+    lat: r.lat, lng: r.lng,
+    _raw: r    // keep the full row for hours/cash roll-up
   };
 }
 
@@ -674,7 +684,44 @@ $('#apFilters').querySelectorAll('button').forEach(b=>b.addEventListener('click'
   apFilter=b.dataset.f; $('#apFilters').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); renderApplications();
 }));
 
-function renderAll(){ renderTiles(); renderBookings(); renderApplications(); }
+/* ---------------- Worker roll-up: hours + cash on hand ---------------- */
+function renderRollup(){
+  // group bookings by assigned worker; sum minutes worked + cash collected
+  const byWorker = {};
+  bookings.forEach(b=>{
+    const r = b._raw || {};   // raw row has work_minutes, drive_minutes, cash_collected
+    if(!b.assignedWorkerId) return;
+    const w = (byWorker[b.assignedWorkerId] ||= { jobs:0, done:0, minutes:0, cash:0 });
+    w.jobs++;
+    if(r.completed) w.done++;
+    w.minutes += (r.work_minutes||0) + (r.drive_minutes||0);
+    w.cash += (+r.cash_collected||0);
+  });
+  const rows = Object.entries(byWorker)
+    .map(([id,t])=>({ worker: workersData.find(x=>x.id===id), ...t }))
+    .filter(r=>r.worker)
+    .sort((a,b)=> b.cash - a.cash);
+  $('#wrCount').textContent = rows.length;
+  if(!rows.length){ $('#workerRollup').innerHTML = '<div class="empty">No assigned jobs yet — totals appear once workers are assigned and complete jobs.</div>'; return; }
+  const totalCash = rows.reduce((s,r)=>s+r.cash,0);
+  $('#workerRollup').innerHTML = rows.map(r=>`
+    <div class="row" style="cursor:default">
+      <div class="ravatar">${initials(r.worker.name)}</div>
+      <div class="rmain">
+        <div class="rtitle">${esc(r.worker.name)}</div>
+        <div class="rsub">${r.done}/${r.jobs} done · ${(r.minutes/60).toFixed(1)} hrs</div>
+      </div>
+      <div class="rright">
+        <span class="ramt" style="color:${r.cash>0?'var(--orange)':'var(--muted)'}">$${r.cash}</span>
+        <span class="pill ${r.cash>0?'review':'confirmed'}">${r.cash>0?'holding cash':'clear'}</span>
+      </div>
+    </div>`).join('')
+    + `<div class="row" style="cursor:default;background:var(--mist)">
+        <div class="rmain"><div class="rtitle">Total cash to collect from workers</div></div>
+        <div class="rright"><span class="ramt" style="color:var(--orange)">$${totalCash}</span></div></div>`;
+}
+
+function renderAll(){ renderTiles(); renderBookings(); renderApplications(); renderRollup(); }
 
 // Dashboard data only loads AFTER a staff member is signed in (see auth gate below).
 function startDashboard(){
