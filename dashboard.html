@@ -461,6 +461,56 @@ function renderApplications(){
 }
 
 /* ---------------- Assignment section (the scheduler UI) ---------------- */
+/* Payment section in the booking drawer: shows deposit/balance, lets staff charge the card. */
+function paymentSection(b){
+  const r = b._raw || {};
+  const deposit = +r.deposit_paid || 0;
+  const charged = +r.balance_charged || 0;
+  const last4 = r.card_last4;
+  const cashCollected = +r.cash_collected || 0;   // what worker collected in the field
+  if(!r.stripe_customer_id){
+    return `<div class="drow"><span class="k">Card on file</span><span class="v" style="color:var(--muted)">None</span></div>`;
+  }
+  // remaining balance = estimate - deposit - already charged - cash collected at door
+  const remaining = Math.max(0, (b.est||0) - deposit - charged - cashCollected);
+  return `
+    <div class="drow"><span class="k">Card on file</span><span class="v">•••• ${esc(last4||'****')}</span></div>
+    <div class="drow"><span class="k">Deposit paid</span><span class="v">$${deposit}</span></div>
+    ${charged>0?`<div class="drow"><span class="k">Balance charged</span><span class="v">$${charged}</span></div>`:''}
+    ${cashCollected>0?`<div class="drow"><span class="k">Collected at door</span><span class="v">$${cashCollected}</span></div>`:''}
+    <div class="drow"><span class="k">Remaining</span><span class="v" style="color:${remaining>0?'var(--orange)':'var(--teal-dark)'}">$${remaining}</span></div>
+    ${remaining>0?`
+      <div style="margin-top:10px">
+        <input type="number" id="chargeAmt-${b.id}" value="${remaining}" min="0" step="1"
+          style="width:110px;padding:8px 10px;border:1.5px solid var(--line);border-radius:9px;font-family:inherit;background:var(--card);color:inherit">
+        <button class="btn approve mini" style="margin-left:8px" onclick="chargeBalance('${b.id}',this)">Charge card</button>
+      </div>`:`<div class="resolved" style="margin-top:8px">✓ Fully paid</div>`}`;
+}
+
+window.chargeBalance = async (bookingId, btn) => {
+  const amt = +document.getElementById(`chargeAmt-${bookingId}`).value;
+  if(!amt || amt<=0){ return; }
+  if(!confirm(`Charge $${amt} to the saved card?`)) return;
+  const orig = btn.textContent; btn.disabled=true; btn.textContent='Charging…';
+  try{
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/stripe-pay`, {
+      method:'POST',
+      headers:{ apikey:SUPABASE_KEY, Authorization:`Bearer ${localStorage.getItem("pk_staff_token")||SUPABASE_KEY}`, 'Content-Type':'application/json' },
+      body: JSON.stringify({ action:'charge_balance', booking_id:bookingId, amount:amt })
+    });
+    const data = await res.json();
+    if(data.ok){
+      btn.textContent = `✓ Charged $${data.amount}`;
+      // update local copy so the drawer reflects it
+      const b = bookings.find(x=>x.id===bookingId);
+      if(b && b._raw) b._raw.balance_charged = (+b._raw.balance_charged||0) + data.amount;
+      setTimeout(()=>openBooking(bookingId), 1200);
+    } else {
+      btn.textContent = '✕ '+(data.error||'Failed'); btn.disabled=false;
+    }
+  }catch(e){ btn.textContent='✕ Error'; btn.disabled=false; }
+};
+
 function assignmentSection(b){
   // already assigned?
   if(b.assignedWorkerId){
@@ -553,6 +603,8 @@ function openBooking(id){
       <div class="drow"><span class="k">Package</span><span class="v">${esc(b.service)}</span></div>
       <div class="drow"><span class="k">Add-ons</span><span class="v">${b.addons.length?`<span class="chips">${b.addons.map(a=>`<span class="chip2">${esc(a)}</span>`).join('')}</span>`:'None'}</span></div>
       <div class="drow"><span class="k">Estimate</span><span class="v">$${b.est}</span></div>
+      <div class="dsec">Payment</div>
+      ${paymentSection(b)}
       <div class="dsec">Appointment</div>
       <div class="drow"><span class="k">Date</span><span class="v">${fmtDate(b.date)}</span></div>
       <div class="drow"><span class="k">Time</span><span class="v">${esc(b.time)} · ${b.flex==='exact'?'exact':'±1 hr flexible'}</span></div>
