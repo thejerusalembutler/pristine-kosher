@@ -202,13 +202,13 @@ function render(){
     const digits=(j.phone||'').replace(/[^0-9]/g,'');
     if(j.completed){
       return `<div class="job done">
-        <div class="jhead"><span class="jtime">${fmt12(j.time_slot)}</span><div class="jname">${esc(j.customer_name)}</div>
+        <div class="jhead"><span class="jtime">${fmt12(j.time_slot)}</span><div class="jname">${j.job_number?`<span style="color:var(--muted);font-size:13px;font-weight:600">#${j.job_number}</span> `:""}${esc(j.customer_name)}</div>
           <div class="jservice">${esc(serviceLabel(j))}</div></div>
         <div class="jaction"><div class="donebadge">✓ Done · Paid: ${esc(PAY[j.payment_method]||'—')}
           <button data-undo="${j.id}">undo</button></div></div></div>`;
     }
     return `<div class="job" data-job="${j.id}">
-      <div class="jhead"><span class="jtime">${fmt12(j.time_slot)}</span><div class="jname">${esc(j.customer_name)}</div>
+      <div class="jhead"><span class="jtime">${fmt12(j.time_slot)}</span><div class="jname">${j.job_number?`<span style="color:var(--muted);font-size:13px;font-weight:600">#${j.job_number}</span> `:""}${esc(j.customer_name)}</div>
         <div class="jservice">${esc(serviceLabel(j))}</div></div>
       <div class="jrows">
         <div class="jrow"><span class="ic">📍</span><span>${esc(j.address||j.market||'')}</span></div>

@@ -254,6 +254,7 @@ function fromDb(r){
     notes: r.notes || '',
     assignedWorkerId: r.assigned_worker_id || null,
     lat: r.lat, lng: r.lng,
+    jobNumber: r.job_number,
     _raw: r    // keep the full row for hours/cash roll-up
   };
 }
@@ -426,7 +427,7 @@ function renderBookings(){
     <div class="row" data-bk="${b.id}">
       <div class="ravatar">${initials(b.name)}</div>
       <div class="rmain">
-        <div class="rtitle">${ATTN_BOOKING(b.status)?'<span class="attn"></span> ':''}${esc(b.name)}</div>
+        <div class="rtitle">${ATTN_BOOKING(b.status)?'<span class="attn"></span> ':''}${b.jobNumber?`<span style="color:var(--muted);font-weight:600">#${b.jobNumber}</span> `:''}${esc(b.name)}</div>
         <div class="rsub">${esc(b.market)} · ${fmtDate(b.date)} ${esc(b.time)}</div>
       </div>
       <div class="rright">
