@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pristine Kosher — Day Route</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{
+    --teal:#20A59F; --teal-dark:#178079; --teal-soft:#E3F4F2;
+    --ink:#0A0A0A; --paper:#FFFFFF; --mist:#F4F6F5;
+    --line:#E4E8E7; --muted:#5C6663; --orange:#F78700;
+    --card:#FFFFFF; --radius:12px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{--teal:#2FBDB6;--teal-dark:#20A59F;--teal-soft:#123330;--ink:#F2F5F4;--paper:#0E1413;--mist:#0A0F0E;--line:#243230;--muted:#9AA7A4;--card:#141C1A}
+  }
+  :root[data-theme="light"]{--teal:#20A59F;--ink:#0A0A0A;--paper:#FFFFFF;--mist:#F4F6F5;--line:#E4E8E7;--muted:#5C6663;--card:#FFFFFF;--teal-soft:#E3F4F2}
+  :root[data-theme="dark"]{--teal:#2FBDB6;--ink:#F2F5F4;--paper:#0E1413;--mist:#0A0F0E;--line:#243230;--muted:#9AA7A4;--card:#141C1A;--teal-soft:#123330}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--mist);color:var(--ink);font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100vh}
+
+  .top{display:flex;align-items:center;gap:14px;padding:14px 24px;background:var(--ink);color:#fff;flex:none}
+  .top .mark{width:30px;height:30px}
+  .top .name{font-weight:800;letter-spacing:.12em;font-size:13px}
+  .top .name span{color:var(--teal)}
+  .top .crumb{margin-left:6px;padding-left:14px;border-left:1px solid #2a3432;font-size:13px;color:#9aa7a4}
+  .top .links{margin-left:auto;display:flex;gap:14px;font-size:13px}
+  .top .links a{color:#9aa7a4;text-decoration:none}.top .links a:hover{color:#fff}
+
+  .controls{display:flex;gap:10px;align-items:center;padding:12px 24px;background:var(--paper);border-bottom:1px solid var(--line);flex:none;flex-wrap:wrap}
+  .controls label{font-size:12px;color:var(--muted);font-weight:600}
+  .controls select,.controls input{font-family:inherit;font-size:13.5px;padding:8px 12px;border:1.5px solid var(--line);border-radius:9px;background:var(--card);color:inherit;cursor:pointer}
+  .controls select:focus,.controls input:focus{outline:none;border-color:var(--teal)}
+  .btn{font-family:inherit;font-weight:700;font-size:13.5px;border:none;background:var(--teal);color:#fff;border-radius:9px;padding:9px 18px;cursor:pointer}
+  .btn:hover{background:var(--teal-dark)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .summary{margin-left:auto;font-size:13px;color:var(--muted)}
+  .summary b{color:var(--ink)}
+
+  .body{flex:1;display:grid;grid-template-columns:340px 1fr;min-height:0}
+  .stops{overflow-y:auto;border-right:1px solid var(--line);background:var(--paper)}
+  .stop{display:flex;gap:12px;padding:13px 18px;border-bottom:1px solid var(--line)}
+  .stop .num{width:26px;height:26px;flex:none;border-radius:50%;background:var(--teal);color:#fff;font-weight:800;font-size:13px;display:grid;place-items:center}
+  .stop .info{flex:1;min-width:0}
+  .stop .n{font-weight:600;font-size:14px}
+  .stop .m{font-size:12.5px;color:var(--muted)}
+  .stop .leg{font-size:11.5px;color:var(--teal-dark);margin-top:3px}
+  #map{width:100%;height:100%}
+  .msg{padding:40px 24px;color:var(--muted);font-size:14px;text-align:center}
+  .msg.err{color:var(--orange)}
+
+  @media (max-width:760px){ .body{grid-template-columns:1fr;grid-template-rows:auto 1fr} .stops{max-height:35vh;border-right:none;border-bottom:1px solid var(--line)} }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <svg class="mark" viewBox="0 0 100 100" aria-hidden="true">
+    <rect x="8" y="14" width="40" height="72" fill="#fff"/>
+    <path d="M20 30 h14 a13 13 0 0 1 0 26 h-14 z" fill="#0A0A0A"/>
+    <rect x="20" y="30" width="6" height="26" fill="#0A0A0A"/>
+    <path d="M50 14 h22 L46 50 L72 86 H50 L28 52 z" fill="#20A59F"/>
+  </svg>
+  <div class="name">PRISTINE <span>KOSHER</span></div>
+  <div class="crumb">Day route optimizer</div>
+  <div class="links"><a href="dashboard.html">Dashboard</a><a href="calendar.html">Calendar</a><a href="map.html">Map</a></div>
+</div>
+
+<div class="controls">
+  <label>Worker</label>
+  <select id="worker"><option value="">Choose a worker…</option></select>
+  <label>Date</label>
+  <input type="date" id="date" value="2027-04-14">
+  <button class="btn" id="go">Build route</button>
+  <div class="summary" id="summary"></div>
+</div>
+
+<div class="body">
+  <div class="stops" id="stops"><div class="msg">Pick a worker and date, then “Build route”.</div></div>
+  <div id="map"></div>
+</div>
+
+<script>
+const SUPABASE_URL='https://qkgdobpazyoxesyiznus.supabase.co';
+const SUPABASE_KEY='sb_publishable_cjaMPpEPhe-HxUd616SSRg_ShraAso2';
+const GKEY='AIzaSyDiFIE0_u7OuBN0k9PkyUgNBLWVsAlz20I';
+
+let map, workers=[], directionsRenderer, directionsService;
+const $=s=>document.querySelector(s);
+const esc=x=>(x||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+
+async function loadWorkers(){
+  const res=await fetch(`${SUPABASE_URL}/rest/v1/workers?select=id,name,home_base,lat,lng&order=name.asc`,
+    {headers:{apikey:SUPABASE_KEY,Authorization:`Bearer ${SUPABASE_KEY}`}});
+  workers = res.ok ? await res.json() : [];
+  $('#worker').innerHTML='<option value="">Choose a worker…</option>'+
+    workers.map(w=>`<option value="${w.id}">${esc(w.name)}</option>`).join('');
+}
+
+async function jobsFor(workerId,date){
+  const url=`${SUPABASE_URL}/rest/v1/bookings?select=customer_name,address,market,time_slot,lat,lng&assigned_worker_id=eq.${workerId}&service_date=eq.${date}&order=time_slot.asc`;
+  const res=await fetch(url,{headers:{apikey:SUPABASE_KEY,Authorization:`Bearer ${SUPABASE_KEY}`}});
+  return res.ok ? (await res.json()).filter(j=>j.lat!=null&&j.lng!=null) : [];
+}
+
+function fmt12(t){ if(!t) return ''; let [h,m]=t.split(':').map(Number); const ap=h>=12?'PM':'AM'; let hh=h%12||12; return `${hh}:${String(m).padStart(2,'0')} ${ap}`; }
+
+async function build(){
+  const wId=$('#worker').value, date=$('#date').value;
+  if(!wId){ $('#stops').innerHTML='<div class="msg">Choose a worker first.</div>'; return; }
+  const worker=workers.find(w=>w.id===wId);
+  $('#stops').innerHTML='<div class="msg">Building the best route…</div>';
+  $('#summary').textContent='';
+
+  const jobs=await jobsFor(wId,date);
+  if(!jobs.length){ $('#stops').innerHTML=`<div class="msg">No geocoded jobs assigned to <b>${esc(worker.name)}</b> on this date.<br><span style="font-size:12px">Assign jobs to this worker on the dashboard, then come back.</span></div>`; return; }
+
+  // Start & end at the worker's home base (if known), route through the jobs
+  const hasHome = worker.lat!=null && worker.lng!=null;
+  const origin = hasHome ? {lat:+worker.lat,lng:+worker.lng} : {lat:+jobs[0].lat,lng:+jobs[0].lng};
+  const waypoints = jobs.map(j=>({location:{lat:+j.lat,lng:+j.lng}, stopover:true}));
+
+  directionsService.route({
+    origin, destination: origin,   // round trip from home
+    waypoints, optimizeWaypoints: true,   // <-- Google solves the best order
+    travelMode: google.maps.TravelMode.DRIVING
+  }, (result,status)=>{
+    if(status!=='OK'){ $('#stops').innerHTML=`<div class="msg err">Couldn’t build the route (${esc(status)}).<br><span style="font-size:12px">If it says REQUEST_DENIED, the Directions API may need enabling in Google Cloud.</span></div>`; return; }
+    directionsRenderer.setDirections(result);
+    const route=result.routes[0];
+    const order=route.waypoint_order;      // optimized visiting order
+    let totalMin=0, totalMi=0;
+    route.legs.forEach(l=>{ totalMin+=l.duration.value/60; totalMi+=l.distance.value/1609; });
+
+    // render ordered stop list
+    let html='';
+    order.forEach((jobIdx,i)=>{
+      const j=jobs[jobIdx];
+      const leg=route.legs[i];  // drive TO this stop
+      html+=`<div class="stop">
+        <div class="num">${i+1}</div>
+        <div class="info">
+          <div class="n">${esc(j.customer_name||'Job')}${j.time_slot?` · ${fmt12(j.time_slot)}`:''}</div>
+          <div class="m">${esc(j.address||j.market||'')}</div>
+          <div class="leg">🚗 ${leg.duration.text} · ${leg.distance.text} from previous stop</div>
+        </div></div>`;
+    });
+    $('#stops').innerHTML=html;
+    $('#summary').innerHTML=`<b>${jobs.length}</b> stops · <b>${Math.round(totalMin)} min</b> driving · <b>${totalMi.toFixed(1)} mi</b> total`;
+  });
+}
+
+function initMap(){
+  map=new google.maps.Map($('#map'),{center:{lat:40.09,lng:-74.22},zoom:9,mapTypeControl:false,streetViewControl:false});
+  directionsService=new google.maps.DirectionsService();
+  directionsRenderer=new google.maps.DirectionsRenderer({map, polylineOptions:{strokeColor:'#20A59F',strokeWeight:5}});
+  loadWorkers();
+  $('#go').addEventListener('click',build);
+}
+window.gmapsReady=initMap;
+
+$('#theme')?.addEventListener('click',()=>{});
+</script>
+<script async
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDiFIE0_u7OuBN0k9PkyUgNBLWVsAlz20I&callback=gmapsReady">
+</script>
+</body>
+</html>
