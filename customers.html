@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pristine Kosher — Customer Search</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="auth-gate.js"></script>
+<style>
+  :root{
+    --teal:#20A59F; --teal-dark:#178079; --teal-soft:#E3F4F2;
+    --ink:#0A0A0A; --paper:#FFFFFF; --mist:#F4F6F5;
+    --line:#E4E8E7; --muted:#5C6663; --orange:#F78700; --green:#2FA84F;
+    --card:#FFFFFF; --radius:12px; --shadow:0 1px 2px rgba(10,10,10,.04),0 8px 24px rgba(10,10,10,.06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{--teal:#2FBDB6;--teal-dark:#20A59F;--teal-soft:#123330;--ink:#F2F5F4;--paper:#0E1413;--mist:#0A0F0E;--line:#243230;--muted:#9AA7A4;--green:#4FC26B;--card:#141C1A}
+  }
+  :root[data-theme="light"]{--teal:#20A59F;--ink:#0A0A0A;--paper:#FFFFFF;--mist:#F4F6F5;--line:#E4E8E7;--muted:#5C6663;--card:#FFFFFF;--teal-soft:#E3F4F2;--green:#2FA84F}
+  :root[data-theme="dark"]{--teal:#2FBDB6;--ink:#F2F5F4;--paper:#0E1413;--mist:#0A0F0E;--line:#243230;--muted:#9AA7A4;--card:#141C1A;--teal-soft:#123330;--green:#4FC26B}
+  *{box-sizing:border-box} html,body{margin:0}
+  body{background:var(--mist);color:var(--ink);font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.5}
+  .top{display:flex;align-items:center;gap:14px;padding:16px 28px;background:var(--ink);color:#fff}
+  .top .mark{width:32px;height:32px}
+  .top .name{font-weight:800;letter-spacing:.12em;font-size:13px}.top .name span{color:var(--teal)}
+  .top .crumb{margin-left:6px;padding-left:16px;border-left:1px solid #2a3432;font-size:13px;color:#9aa7a4}
+  .top .links{margin-left:auto;display:flex;gap:14px;font-size:13px}
+  .top .links a{color:#9aa7a4;text-decoration:none}.top .links a:hover{color:#fff}
+
+  .page{max-width:900px;margin:0 auto;padding:24px 28px 60px}
+  h1{font-size:24px;font-weight:800;margin:0 0 4px}
+  .lead{color:var(--muted);font-size:14px;margin:0 0 20px}
+  .searchbar{display:flex;gap:10px;margin-bottom:24px}
+  .searchbar input{flex:1;font-family:inherit;font-size:16px;padding:13px 16px;border:1.5px solid var(--line);border-radius:12px;background:var(--card);color:inherit}
+  .searchbar input:focus{outline:none;border-color:var(--teal)}
+  .searchbar button{font-family:inherit;font-weight:700;font-size:15px;border:none;background:var(--teal);color:#fff;border-radius:12px;padding:0 24px;cursor:pointer}
+
+  .cust{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);margin-bottom:16px;box-shadow:var(--shadow);overflow:hidden}
+  .chead{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px}
+  .cav{width:44px;height:44px;border-radius:12px;background:var(--teal-soft);color:var(--teal-dark);display:grid;place-items:center;font-weight:800;flex:none}
+  .cname{font-weight:800;font-size:17px}
+  .csub{font-size:13px;color:var(--muted)}
+  .cstats{margin-left:auto;text-align:right;font-size:13px}
+  .cstats b{font-size:16px;font-variant-numeric:tabular-nums}
+  .jobrow{display:grid;grid-template-columns:70px 1fr auto;gap:14px;padding:12px 20px;border-bottom:1px solid var(--line);font-size:14px;align-items:center}
+  .jobrow:last-child{border-bottom:none}
+  .jn{font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
+  .jinfo b{font-weight:600}
+  .jinfo small{color:var(--muted);display:block;font-size:12.5px}
+  .jright{text-align:right}
+  .jamt{font-weight:700;font-variant-numeric:tabular-nums}
+  .pill{font-size:10.5px;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:99px;letter-spacing:.03em}
+  .pill.paid{background:var(--teal-soft);color:var(--teal-dark)}
+  .pill.owe{background:color-mix(in srgb,var(--orange) 18%,transparent);color:var(--orange)}
+  .empty{text-align:center;color:var(--muted);padding:50px 20px}
+</style>
+</head>
+<body>
+<div class="top">
+  <svg class="mark" viewBox="0 0 100 100"><rect x="8" y="14" width="40" height="72" fill="#fff"/><path d="M20 30 h14 a13 13 0 0 1 0 26 h-14 z" fill="#0A0A0A"/><rect x="20" y="30" width="6" height="26" fill="#0A0A0A"/><path d="M50 14 h22 L46 50 L72 86 H50 L28 52 z" fill="#20A59F"/></svg>
+  <div class="name">PRISTINE <span>KOSHER</span></div>
+  <div class="crumb">Customer search</div>
+  <div class="links"><a href="dashboard.html">Dashboard</a><a href="calendar.html">Calendar</a></div>
+</div>
+
+<div class="page">
+  <h1>Customer history</h1>
+  <p class="lead">Search any customer — by name or phone — to see everything they’ve ever booked and paid, across all seasons.</p>
+  <div class="searchbar">
+    <input id="q" placeholder="Search by name or phone…" autofocus>
+    <button id="go">Search</button>
+  </div>
+  <div id="results"><div class="empty">Type a name or phone number and search.</div></div>
+</div>
+
+<script>
+const SUPABASE_URL='https://qkgdobpazyoxesyiznus.supabase.co';
+const SUPABASE_KEY='sb_publishable_cjaMPpEPhe-HxUd616SSRg_ShraAso2';
+const $=s=>document.querySelector(s);
+const esc=x=>(x||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+const H=()=>({apikey:SUPABASE_KEY,Authorization:`Bearer ${localStorage.getItem("pk_staff_token")||SUPABASE_KEY}`});
+const initials=n=>(n||'?').trim().split(/\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
+const fmtDate=d=>d?new Date(d+'T00:00').toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'}):'—';
+
+function discountedTotal(r){
+  let t=r.estimate||0;
+  if(r.discount_type==='percent') t=t*(1-(r.discount_value||0)/100);
+  else if(r.discount_type==='amount') t=t-(r.discount_value||0);
+  return Math.max(0,Math.round(t));
+}
+function paidSoFar(r){ return (+r.deposit_paid||0)+(+r.balance_charged||0)+(+r.offline_paid||0)+(+r.cash_collected||0); }
+
+async function search(){
+  const q=$('#q').value.trim();
+  if(!q){ return; }
+  $('#results').innerHTML='<div class="empty">Searching…</div>';
+  // search by name OR phone (case-insensitive partial)
+  const enc=encodeURIComponent(`%${q}%`);
+  const url=`${SUPABASE_URL}/rest/v1/bookings?select=*&or=(customer_name.ilike.${enc},phone.ilike.${enc})&order=service_date.desc`;
+  const res=await fetch(url,{headers:H()});
+  const rows=res.ok?await res.json():[];
+  if(!rows.length){ $('#results').innerHTML=`<div class="empty">No customers found for “${esc(q)}”.</div>`; return; }
+  // group by customer (name+phone)
+  const groups={};
+  rows.forEach(r=>{ const key=(r.customer_name||'')+'|'+(r.phone||''); (groups[key] ||= []).push(r); });
+  $('#results').innerHTML=Object.values(groups).map(jobs=>{
+    const c=jobs[0];
+    const totalBooked=jobs.reduce((s,j)=>s+discountedTotal(j),0);
+    const totalPaid=jobs.reduce((s,j)=>s+paidSoFar(j),0);
+    return `<div class="cust">
+      <div class="chead">
+        <div class="cav">${initials(c.customer_name)}</div>
+        <div><div class="cname">${esc(c.customer_name||'Unknown')}</div>
+          <div class="csub">${esc(c.phone||'')}${c.email?' · '+esc(c.email):''}</div></div>
+        <div class="cstats"><div>${jobs.length} booking${jobs.length>1?'s':''}</div>
+          <b>$${totalPaid}</b> paid of $${totalBooked}</div>
+      </div>
+      ${jobs.map(j=>{
+        const total=discountedTotal(j), paid=paidSoFar(j), owe=Math.max(0,total-paid);
+        return `<div class="jobrow">
+          <span class="jn">#${j.job_number||'—'}</span>
+          <div class="jinfo"><b>${fmtDate(j.service_date)}</b> · $${j.estimate||0}${j.discount_value?` (disc ${j.discount_type==='percent'?j.discount_value+'%':'$'+j.discount_value})`:''}
+            <small>${esc(j.market||'')} · ${esc(j.address||'')}</small></div>
+          <div class="jright"><div class="jamt">$${paid}/$${total}</div>
+            <span class="pill ${owe>0?'owe':'paid'}">${owe>0?'owes $'+owe:'paid'}</span></div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }).join('');
+}
+$('#go').addEventListener('click',search);
+$('#q').addEventListener('keydown',e=>{ if(e.key==='Enter') search(); });
+
+PKAuth.protect(()=>{ /* ready; user searches manually */ });
+</script>
+</body>
+</html>

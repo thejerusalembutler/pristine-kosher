@@ -169,6 +169,7 @@
   <div class="name">PRISTINE <span>KOSHER</span></div>
   <div class="crumb">Operations dashboard</div>
   <div class="navlinks">
+    <a href="customers.html">Customers</a>
     <a href="calendar.html">Calendar</a>
     <a href="route.html">Routes</a>
     <a href="map.html">Map</a>
@@ -471,21 +472,78 @@ function paymentSection(b){
   if(!r.stripe_customer_id){
     return `<div class="drow"><span class="k">Card on file</span><span class="v" style="color:var(--muted)">None</span></div>`;
   }
-  // remaining balance = estimate - deposit - already charged - cash collected at door
-  const remaining = Math.max(0, (b.est||0) - deposit - charged - cashCollected);
+  const offline = +r.offline_paid || 0;
+  const discounted = discountedTotal(r);
+  // remaining = discounted total - all money in
+  const paidIn = deposit + charged + cashCollected + offline;
+  const remaining = Math.max(0, discounted - paidIn);
   return `
     <div class="drow"><span class="k">Card on file</span><span class="v">•••• ${esc(last4||'****')}</span></div>
+    ${r.discount_value?`<div class="drow"><span class="k">Discount</span><span class="v">${r.discount_type==='percent'?r.discount_value+'%':'$'+r.discount_value} off → total $${discounted}</span></div>`:''}
     <div class="drow"><span class="k">Deposit paid</span><span class="v">$${deposit}</span></div>
-    ${charged>0?`<div class="drow"><span class="k">Balance charged</span><span class="v">$${charged}</span></div>`:''}
-    ${cashCollected>0?`<div class="drow"><span class="k">Collected at door</span><span class="v">$${cashCollected}</span></div>`:''}
+    ${charged>0?`<div class="drow"><span class="k">Card balance charged</span><span class="v">$${charged}</span></div>`:''}
+    ${cashCollected>0?`<div class="drow"><span class="k">Worker collected</span><span class="v">$${cashCollected}</span></div>`:''}
+    ${offline>0?`<div class="drow"><span class="k">Offline (Zelle/cash/check)</span><span class="v">$${offline}</span></div>`:''}
     <div class="drow"><span class="k">Remaining</span><span class="v" style="color:${remaining>0?'var(--orange)':'var(--teal-dark)'}">$${remaining}</span></div>
     ${remaining>0?`
-      <div style="margin-top:10px">
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
         <input type="number" id="chargeAmt-${b.id}" value="${remaining}" min="0" step="1"
-          style="width:110px;padding:8px 10px;border:1.5px solid var(--line);border-radius:9px;font-family:inherit;background:var(--card);color:inherit">
-        <button class="btn approve mini" style="margin-left:8px" onclick="chargeBalance('${b.id}',this)">Charge card</button>
+          style="width:90px;padding:8px 10px;border:1.5px solid var(--line);border-radius:9px;font-family:inherit;background:var(--card);color:inherit">
+        <button class="btn approve mini" onclick="chargeBalance('${b.id}',this)">Charge card</button>
+      </div>
+      <div style="margin-top:8px">
+        <div class="dsec" style="margin:8px 0 4px">Record an offline payment</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <input type="number" id="offAmt-${b.id}" placeholder="$" min="0" style="width:80px;padding:8px;border:1.5px solid var(--line);border-radius:9px;font-family:inherit;background:var(--card);color:inherit">
+          <select id="offMethod-${b.id}" style="padding:8px;border:1.5px solid var(--line);border-radius:9px;font-family:inherit;background:var(--card);color:inherit">
+            <option value="zelle">Zelle</option><option value="cash">Cash</option><option value="check">Check</option>
+          </select>
+          <button class="btn secondary mini" onclick="recordOffline('${b.id}',this)">Record</button>
+        </div>
+      </div>
+      <div style="margin-top:10px">
+        <div class="dsec" style="margin:8px 0 4px">Apply discount</div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="number" id="discVal-${b.id}" value="${r.discount_value||''}" placeholder="0" min="0" style="width:70px;padding:8px;border:1.5px solid var(--line);border-radius:9px;font-family:inherit;background:var(--card);color:inherit">
+          <select id="discType-${b.id}" style="padding:8px;border:1.5px solid var(--line);border-radius:9px;font-family:inherit;background:var(--card);color:inherit">
+            <option value="amount" ${r.discount_type==='amount'?'selected':''}>$ off</option>
+            <option value="percent" ${r.discount_type==='percent'?'selected':''}>% off</option>
+          </select>
+          <button class="btn secondary mini" onclick="applyDiscount('${b.id}',this)">Apply</button>
+        </div>
       </div>`:`<div class="resolved" style="margin-top:8px">✓ Fully paid</div>`}`;
 }
+
+/* discounted total for a raw booking row */
+function discountedTotal(r){
+  let t=r.estimate||0;
+  if(r.discount_type==='percent') t=t*(1-(r.discount_value||0)/100);
+  else if(r.discount_type==='amount') t=t-(r.discount_value||0);
+  return Math.max(0,Math.round(t));
+}
+
+async function patchBooking(id, body){
+  await fetch(`${SUPABASE_URL}/rest/v1/bookings?id=eq.${id}`,{method:'PATCH',
+    headers:{'Content-Type':'application/json',apikey:SUPABASE_KEY,Authorization:`Bearer ${localStorage.getItem("pk_staff_token")||SUPABASE_KEY}`,'Prefer':'return=minimal'},
+    body:JSON.stringify(body)});
+}
+window.recordOffline = async (id, btn)=>{
+  const amt=+document.getElementById(`offAmt-${id}`).value;
+  const method=document.getElementById(`offMethod-${id}`).value;
+  if(!amt||amt<=0) return;
+  const b=bookings.find(x=>x.id===id); const cur=+(b._raw.offline_paid||0);
+  await patchBooking(id,{offline_paid:cur+amt,offline_method:method});
+  b._raw.offline_paid=cur+amt; b._raw.offline_method=method;
+  openBooking(id);
+};
+window.applyDiscount = async (id, btn)=>{
+  const val=+document.getElementById(`discVal-${id}`).value||0;
+  const type=document.getElementById(`discType-${id}`).value;
+  const b=bookings.find(x=>x.id===id);
+  await patchBooking(id,{discount_type:type,discount_value:val});
+  b._raw.discount_type=type; b._raw.discount_value=val;
+  openBooking(id);
+};
 
 window.chargeBalance = async (bookingId, btn) => {
   const amt = +document.getElementById(`chargeAmt-${bookingId}`).value;
