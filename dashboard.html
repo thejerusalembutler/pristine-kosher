@@ -1,3 +1,7 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
 <title>Pristine Kosher — Operations Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
@@ -113,7 +117,25 @@
     .cols{grid-template-columns:1fr}
     .page{padding:18px}.top{padding:14px 18px}
   }
+
+  /* scheduler / assignment UI */
+  .sug-hint{font-size:12px;color:var(--muted);margin:2px 0 8px}
+  .wsug{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;margin-bottom:7px;background:var(--card)}
+  .wsug.best{border-color:var(--teal);background:var(--teal-soft)}
+  .wsug-info{flex:1;min-width:0}
+  .wsug-name{font-weight:600;font-size:14px}
+  .wsug.best .wsug-name{color:var(--teal-dark)}
+  .wsug-why{font-size:12px;color:var(--muted)}
+  .btn.mini{flex:none;padding:7px 16px;font-size:13px;border-radius:9px}
+  .assigned-now{background:var(--teal-soft);color:var(--teal-dark);border-radius:10px;padding:12px 14px;font-size:14px;display:flex;align-items:center;gap:8px}
+  .assigned-now b{font-weight:700}
+  .mini-btn{margin-left:auto;background:none;border:1px solid var(--teal);color:var(--teal-dark);border-radius:8px;padding:5px 12px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit}
+  .mini-btn:hover{background:var(--teal);color:#fff}
+  .no-match{background:color-mix(in srgb,var(--orange) 12%,transparent);border:1px solid var(--orange);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--muted)}
+  .no-match b{color:var(--ink)}
 </style>
+</head>
+<body>
 
 <div class="top">
   <svg class="mark" viewBox="0 0 100 100" aria-hidden="true">
@@ -163,20 +185,147 @@
 <aside class="drawer" id="drawer" aria-label="Details"></aside>
 
 <script>
-/* ---------------- Demo data ---------------- */
-let bookings = [
-  {id:'b1',name:'Sarah Cohen',market:'Lakewood, NJ',service:'Counters + sinks · Large',addons:['Stovetop','Small island'],date:'2027-04-14',time:'9:00 AM',flex:'exact',est:380,status:'new',phone:'(732) 555-0110',address:'12 Forest Ave, Lakewood',notes:'Parking in driveway.'},
-  {id:'b2',name:'Miriam Katz',market:'Five Towns, NY',service:'Counters + sinks · Standard',addons:['Microwave'],date:'2027-04-15',time:'10:30 AM',flex:'limited',est:290,status:'needs',phone:'(516) 555-0193',address:'8 Central Ave, Cedarhurst',notes:'Kitchen size unsure — sent a photo.'},
-  {id:'b3',name:'Dovid Weiss',market:'North Jersey',service:'Sinks only · 2 sinks',addons:[],date:'2027-04-13',time:'2:00 PM',flex:'exact',est:155,status:'confirmed',phone:'(973) 555-0177',address:'40 Park St, Teaneck',notes:''},
-  {id:'b4',name:'Rivka Green',market:'South Florida',service:'Counters + sinks · Small',addons:['Oven','Warming drawer'],date:'2027-04-16',time:'8:30 AM',flex:'limited',est:280,status:'review',phone:'(305) 555-0148',address:'Near Boca boundary — verify',notes:'Address may be outside service area — review.'},
-  {id:'b5',name:'Yaakov Brody',market:'Brooklyn, NY',service:'Counters + sinks · Large',addons:['Large island','Stovetop'],date:'2027-04-17',time:'11:00 AM',flex:'exact',est:400,status:'new',phone:'(718) 555-0122',address:'1420 Ave J, Brooklyn',notes:''}
-];
-let applications = [
-  {id:'a1',name:'Moshe Adler',market:'Lakewood',phone:'(732) 555-0200',email:'moshe.a@email.com',car:'yes',comm:'whatsapp',returning:'yes',years:'2025',yeshiva:'BMG',estHours:118,fullDays:14,partDays:2,status:'pending'},
-  {id:'a2',name:'Eli Stern',market:'Five Towns',phone:'(516) 555-0231',email:'eli.stern@email.com',car:'yes',comm:'sms',returning:'no',years:'',yeshiva:'Sh’or Yoshuv',estHours:96,fullDays:11,partDays:3,status:'pending'},
-  {id:'a3',name:'Shmuel Berger',market:'Baltimore',phone:'(410) 555-0175',email:'sberger@email.com',car:'no',comm:'whatsapp',returning:'no',years:'',yeshiva:'Ner Yisroel',estHours:40,fullDays:4,partDays:2,status:'pending'},
-  {id:'a4',name:'Chaim Fisher',market:'Lakewood',phone:'(732) 555-0288',email:'cfisher@email.com',car:'yes',comm:'whatsapp',returning:'yes',years:'2023, 2025',yeshiva:'BMG',estHours:130,fullDays:16,partDays:0,status:'approved'}
-];
+/* ---------------- Supabase connection ---------------- */
+const SUPABASE_URL = 'https://qkgdobpazyoxesyiznus.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_cjaMPpEPhe-HxUd616SSRg_ShraAso2';
+
+/* Bookings load from the real database (starts empty, filled by loadBookings). */
+let bookings = [];
+
+/* Turn a raw database row into the shape the dashboard already renders. */
+function fromDb(r){
+  const sizeLabel = r.base==='sinks'
+    ? `Sinks only · ${r.sink_count||'?'} sink${r.sink_count>1?'s':''}`
+    : `Counters + sinks · ${r.size?r.size.charAt(0).toUpperCase()+r.size.slice(1):'—'}`;
+  const names = {stovetop:'Stovetop',warming:'Warming drawer',microwave:'Microwave',oven:'Oven'};
+  const addons = (r.addons||[]).map(a=>names[a]||a);
+  if(r.island) addons.push(`${r.island.charAt(0).toUpperCase()+r.island.slice(1)} island`);
+  return {
+    id: r.id,
+    name: r.customer_name || 'No name',
+    market: r.market || '—',
+    service: sizeLabel,
+    addons,
+    date: r.service_date || '',
+    time: r.time_slot || '—',
+    flex: r.flexibility || 'exact',
+    est: r.estimate || 0,
+    status: r.status || 'new',
+    phone: r.phone || '',
+    email: r.email || '',
+    address: r.address || '',
+    notes: r.notes || '',
+    assignedWorkerId: r.assigned_worker_id || null
+  };
+}
+
+/* Fetch all bookings from Supabase, newest first. */
+async function loadBookings(){
+  try{
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/bookings?select=*&order=created_at.desc`, {
+      headers:{ 'apikey':SUPABASE_KEY, 'Authorization':`Bearer ${SUPABASE_KEY}` }
+    });
+    if(!res.ok){ console.error('Load failed:', res.status, await res.text()); return; }
+    const rows = await res.json();
+    bookings = rows.map(fromDb);
+    renderAll();
+  }catch(err){ console.error('Load error:', err); }
+}
+
+/* ---------------- Workers + market links (for the scheduler) ---------------- */
+let workersData = [];      // [{id,name,phone,has_car,availability,markets:[marketId...]}]
+let marketsById = {};      // marketId -> name
+
+async function loadWorkers(){
+  try{
+    const [wRes,mRes,lRes] = await Promise.all([
+      fetch(`${SUPABASE_URL}/rest/v1/workers?select=*`, {headers:{apikey:SUPABASE_KEY,Authorization:`Bearer ${SUPABASE_KEY}`}}),
+      fetch(`${SUPABASE_URL}/rest/v1/markets?select=id,name`, {headers:{apikey:SUPABASE_KEY,Authorization:`Bearer ${SUPABASE_KEY}`}}),
+      fetch(`${SUPABASE_URL}/rest/v1/worker_markets?select=*`, {headers:{apikey:SUPABASE_KEY,Authorization:`Bearer ${SUPABASE_KEY}`}})
+    ]);
+    const ws = wRes.ok ? await wRes.json() : [];
+    const ms = mRes.ok ? await mRes.json() : [];
+    const links = lRes.ok ? await lRes.json() : [];
+    marketsById = Object.fromEntries(ms.map(m=>[m.id,m.name]));
+    const marketByName = Object.fromEntries(ms.map(m=>[m.name,m.id]));
+    const byWorker = {};
+    links.forEach(l=>{ (byWorker[l.worker_id]=byWorker[l.worker_id]||[]).push(l.market_id); });
+    workersData = ws.map(w=>({
+      ...w,
+      markets: byWorker[w.id] || [],
+      // fallback: if no explicit link, infer market from home_base text
+      inferredMarket: marketByName[(w.home_base||'').trim()] || null
+    }));
+  }catch(err){ console.error('Load workers error:', err); }
+}
+
+/* ---------------- The scheduler: rank eligible workers for a booking ----------------
+   Hard rules (must pass): serves the booking's market, available that date,
+   has a car, not already booked at that time.
+   Ranking: lightest current workload first (spread the jobs). */
+function eligibleWorkers(b){
+  const marketName = b.market;
+  const date = b.date;                       // "YYYY-MM-DD"
+  const time = b.time;                        // "HH:MM"
+  // how many jobs each worker already has that day (for workload + double-book check)
+  const dayLoad = {}; const busyAt = {};
+  bookings.forEach(x=>{
+    if(x.assignedWorkerId && x.date===date){
+      dayLoad[x.assignedWorkerId] = (dayLoad[x.assignedWorkerId]||0)+1;
+      if(x.time===time) busyAt[x.assignedWorkerId]=true;   // same slot = conflict
+    }
+  });
+  return workersData.map(w=>{
+    const servesMarket = w.markets.some(mid=>marketsById[mid]===marketName) || (w.inferredMarket && marketsById[w.inferredMarket]===marketName);
+    const avail = w.availability && w.availability[date] && w.availability[date].state && w.availability[date].state!=='none';
+    const hasCar = w.has_car !== false;
+    const doubleBooked = !!busyAt[w.id];
+    const eligible = servesMarket && avail && hasCar && !doubleBooked && (w.status!=='inactive');
+    return {
+      worker:w, eligible, servesMarket, avail, hasCar, doubleBooked,
+      load: dayLoad[w.id]||0
+    };
+  })
+  .filter(r=>r.eligible)
+  .sort((a,b2)=> a.load - b2.load || a.worker.name.localeCompare(b2.worker.name));
+}
+
+/* Applications load from the real `applications` table (starts empty). */
+let applications = [];
+
+/* Turn a raw application row into the shape the dashboard renders. */
+function appFromDb(r){
+  return {
+    id: r.id,
+    name: r.full_name || 'No name',
+    market: r.market || '—',
+    phone: r.phone || '',
+    email: r.email || '',
+    car: r.has_car ? 'yes' : 'no',
+    comm: r.communication || '',
+    returning: r.is_returning ? 'yes' : 'no',
+    years: r.prior_years || '',
+    yeshiva: r.yeshiva || '',
+    estHours: r.est_hours || 0,
+    fullDays: r.full_days || 0,
+    partDays: r.part_days || 0,
+    status: r.status || 'pending',
+    _raw: r    // keep the full row so we can create a worker on approval
+  };
+}
+
+/* Fetch all applications from Supabase, newest first. */
+async function loadApplications(){
+  try{
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/applications?select=*&order=created_at.desc`, {
+      headers:{ 'apikey':SUPABASE_KEY, 'Authorization':`Bearer ${SUPABASE_KEY}` }
+    });
+    if(!res.ok){ console.error('Load applications failed:', res.status, await res.text()); return; }
+    const rows = await res.json();
+    applications = rows.map(appFromDb);
+    renderAll();
+  }catch(err){ console.error('Load applications error:', err); }
+}
 
 const STATUS_LABEL = {new:'New',needs:'Needs info',review:'Needs review',confirmed:'Confirmed',declined:'Declined',pending:'Pending',approved:'Approved'};
 const ATTN_BOOKING = s => ['new','needs','review'].includes(s);
@@ -184,7 +333,7 @@ const ATTN_BOOKING = s => ['new','needs','review'].includes(s);
 const $ = s => document.querySelector(s);
 const esc = x => (x||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
 const initials = n => n.trim().split(/\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
-const fmtDate = d => new Date(d+'T00:00').toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});
+const fmtDate = d => d ? new Date(d+'T00:00').toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}) : 'No date';
 let bkFilter='all', apFilter='all';
 
 /* ---------------- Tiles ---------------- */
@@ -245,6 +394,55 @@ function renderApplications(){
   $('#applications').querySelectorAll('[data-ap]').forEach(r=>r.addEventListener('click',()=>openApplication(r.dataset.ap)));
 }
 
+/* ---------------- Assignment section (the scheduler UI) ---------------- */
+function assignmentSection(b){
+  // already assigned?
+  if(b.assignedWorkerId){
+    const w = workersData.find(x=>x.id===b.assignedWorkerId);
+    return `<div class="assigned-now">✓ Assigned to <b>${esc(w?w.name:'a worker')}</b>
+      <button class="mini-btn" onclick="unassign('${b.id}')">Change</button></div>`;
+  }
+  const ranked = eligibleWorkers(b);
+  if(!ranked.length){
+    return `<div class="no-match">No eligible worker found — no one in <b>${esc(b.market)}</b> is available ${fmtDate(b.date)} with an open slot. This is a scheduling exception to review.</div>`;
+  }
+  const rows = ranked.map((r,i)=>`
+    <div class="wsug ${i===0?'best':''}">
+      <div class="wsug-info">
+        <div class="wsug-name">${i===0?'★ ':''}${esc(r.worker.name)}</div>
+        <div class="wsug-why">${r.load===0?'No jobs yet that day':`${r.load} job${r.load>1?'s':''} that day`} · ${r.worker.has_car?'has car':'no car'}</div>
+      </div>
+      <button class="btn approve mini" onclick="assignWorker('${b.id}','${r.worker.id}')">Assign</button>
+    </div>`).join('');
+  return `<div class="sug-hint">AI suggests — top pick starred. You confirm.</div>${rows}`;
+}
+
+window.assignWorker = async (bookingId, workerId) => {
+  const b = bookings.find(x=>x.id===bookingId);
+  b.assignedWorkerId = workerId;            // update locally
+  openBooking(bookingId);                    // re-render drawer to show "assigned"
+  renderAll();
+  try{
+    await fetch(`${SUPABASE_URL}/rest/v1/bookings?id=eq.${bookingId}`, {
+      method:'PATCH',
+      headers:{ 'Content-Type':'application/json', 'apikey':SUPABASE_KEY, 'Authorization':`Bearer ${SUPABASE_KEY}`, 'Prefer':'return=minimal' },
+      body: JSON.stringify({ assigned_worker_id: workerId })
+    });
+  }catch(err){ console.error('Assign failed:', err); }
+};
+window.unassign = async (bookingId) => {
+  const b = bookings.find(x=>x.id===bookingId);
+  b.assignedWorkerId = null;
+  openBooking(bookingId); renderAll();
+  try{
+    await fetch(`${SUPABASE_URL}/rest/v1/bookings?id=eq.${bookingId}`, {
+      method:'PATCH',
+      headers:{ 'Content-Type':'application/json', 'apikey':SUPABASE_KEY, 'Authorization':`Bearer ${SUPABASE_KEY}`, 'Prefer':'return=minimal' },
+      body: JSON.stringify({ assigned_worker_id: null })
+    });
+  }catch(err){ console.error('Unassign failed:', err); }
+};
+
 /* ---------------- Drawer: booking ---------------- */
 function openBooking(id){
   const b = bookings.find(x=>x.id===id);
@@ -264,6 +462,8 @@ function openBooking(id){
       <div class="dsec">Appointment</div>
       <div class="drow"><span class="k">Date</span><span class="v">${fmtDate(b.date)}</span></div>
       <div class="drow"><span class="k">Time</span><span class="v">${esc(b.time)} · ${b.flex==='exact'?'exact':'±1 hr flexible'}</span></div>
+      <div class="dsec">Worker assignment</div>
+      ${assignmentSection(b)}
       <div class="dsec">Customer</div>
       <div class="drow"><span class="k">Phone</span><span class="v">${esc(b.phone)}</span></div>
       <div class="drow"><span class="k">Address</span><span class="v">${esc(b.address)}</span></div>
@@ -278,7 +478,17 @@ function openBooking(id){
         </div>`}`;
   openDrawer();
 }
-window.setBooking=(id,status)=>{ bookings.find(b=>b.id===id).status=status; renderAll(); closeDrawer(); };
+window.setBooking=async(id,status)=>{
+  bookings.find(b=>b.id===id).status=status; renderAll(); closeDrawer();
+  // save the status change back to the database
+  try{
+    await fetch(`${SUPABASE_URL}/rest/v1/bookings?id=eq.${id}`, {
+      method:'PATCH',
+      headers:{ 'Content-Type':'application/json', 'apikey':SUPABASE_KEY, 'Authorization':`Bearer ${SUPABASE_KEY}`, 'Prefer':'return=minimal' },
+      body: JSON.stringify({status})
+    });
+  }catch(err){ console.error('Status update failed:', err); }
+};
 
 /* ---------------- Drawer: application ---------------- */
 function openApplication(id){
@@ -305,14 +515,67 @@ function openApplication(id){
       <div class="drow"><span class="k">Returning</span><span class="v">${a.returning==='yes'?`Yes (${esc(a.years)})`:'No'}</span></div>
     </div>
     ${resolved
-      ? `<div class="resolved ${a.status==='declined'?'no':''}">${a.status==='approved'?'✓ Approved — added to '+a.market':STATUS_LABEL[a.status]}</div>`
+      ? `<div class="resolved ${a.status==='declined'?'no':''}">${a.status==='approved'?('✓ Approved — added to '+a.market):STATUS_LABEL[a.status]}</div>`
       : `<div class="dfoot">
           <button class="btn decline" onclick="setApp('${a.id}','declined')">Decline</button>
           <button class="btn approve" onclick="setApp('${a.id}','approved')">Approve worker</button>
         </div>`}`;
   openDrawer();
 }
-window.setApp=(id,status)=>{ applications.find(a=>a.id===id).status=status; renderAll(); closeDrawer(); };
+window.setApp=async(id,status)=>{
+  const app = applications.find(a=>a.id===id);
+  app.status=status; renderAll(); closeDrawer();
+
+  // 1. update the application's status in the database
+  try{
+    await fetch(`${SUPABASE_URL}/rest/v1/applications?id=eq.${id}`, {
+      method:'PATCH',
+      headers:{ 'Content-Type':'application/json', 'apikey':SUPABASE_KEY, 'Authorization':`Bearer ${SUPABASE_KEY}`, 'Prefer':'return=minimal' },
+      body: JSON.stringify({status})
+    });
+  }catch(err){ console.error('Application status update failed:', err); }
+
+  // 2. if approved, create a WORKER from this application (carries availability + market)
+  if(status==='approved'){
+    const r = app._raw || {};
+    const worker = {
+      name: r.full_name,
+      phone: r.phone,
+      email: r.email,
+      home_base: r.address || r.market,
+      hourly_rate: 30,
+      has_car: r.has_car,
+      travel_flexibility: 'medium',
+      availability: r.availability,
+      status: 'active',
+      application_id: r.id
+    };
+    try{
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/workers`, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', 'apikey':SUPABASE_KEY, 'Authorization':`Bearer ${SUPABASE_KEY}`, 'Prefer':'return=representation' },
+        body: JSON.stringify(worker)
+      });
+      if(res.ok){
+        const [created] = await res.json();
+        // link the worker to their market (many-to-many), if the market name matches one of ours
+        if(created && r.market){
+          const mRes = await fetch(`${SUPABASE_URL}/rest/v1/markets?select=id&name=eq.${encodeURIComponent(r.market)}`, {
+            headers:{ 'apikey':SUPABASE_KEY, 'Authorization':`Bearer ${SUPABASE_KEY}` }
+          });
+          const markets = mRes.ok ? await mRes.json() : [];
+          if(markets[0]){
+            await fetch(`${SUPABASE_URL}/rest/v1/worker_markets`, {
+              method:'POST',
+              headers:{ 'Content-Type':'application/json', 'apikey':SUPABASE_KEY, 'Authorization':`Bearer ${SUPABASE_KEY}`, 'Prefer':'return=minimal' },
+              body: JSON.stringify({ worker_id: created.id, market_id: markets[0].id })
+            });
+          }
+        }
+      } else { console.error('Create worker failed:', res.status, await res.text()); }
+    }catch(err){ console.error('Create worker error:', err); }
+  }
+};
 
 /* ---------------- Drawer open/close ---------------- */
 function openDrawer(){ $('#scrim').classList.add('open'); $('#drawer').classList.add('open'); }
@@ -329,7 +592,10 @@ $('#apFilters').querySelectorAll('button').forEach(b=>b.addEventListener('click'
 }));
 
 function renderAll(){ renderTiles(); renderBookings(); renderApplications(); }
-renderAll();
+renderAll();          // draw immediately (applications demo data + empty bookings)
+loadWorkers();        // load workers + market links (for the scheduler)
+loadBookings();       // then fetch real bookings from the database and re-draw
+loadApplications();   // and fetch real worker applications
 
 /* theme */
 $('#theme').addEventListener('click',()=>{
@@ -338,3 +604,5 @@ $('#theme').addEventListener('click',()=>{
   document.documentElement.setAttribute('data-theme', cur?(cur==='dark'?'light':'dark'):(sysDark?'light':'dark'));
 });
 </script>
+</body>
+</html>
