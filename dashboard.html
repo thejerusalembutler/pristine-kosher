@@ -296,7 +296,20 @@ function eligibleWorkers(b){
   })
   .filter(r=>r.eligible)
   .sort((a,b2)=>{
-    // nearest first; workers with a known distance rank above those without; workload breaks ties
+    // RULE: prefer a worker who already has a job that day (so this becomes their 2nd+),
+    // rather than bringing out a fresh worker for a single stop. A worker who is already
+    // working AND reasonably close beats an idle worker who is only marginally closer.
+    const aWorking = a.load > 0, bWorking = b2.load > 0;
+    if(aWorking !== bWorking){
+      // one is already working, the other isn't. Prefer the working one UNLESS the
+      // idle worker is dramatically closer (>10 mi closer = worth bringing out fresh).
+      const working = aWorking ? a : b2;
+      const idle    = aWorking ? b2 : a;
+      const idleMuchCloser = (idle.dist!=null && working.dist!=null && working.dist - idle.dist > 10);
+      if(idleMuchCloser) return aWorking ? 1 : -1;   // idle wins only if much closer
+      return aWorking ? -1 : 1;                        // otherwise the already-working one wins
+    }
+    // both working, or both idle: nearest first, then lighter workload
     if(a.dist!=null && b2.dist!=null && Math.abs(a.dist-b2.dist)>0.5) return a.dist - b2.dist;
     if(a.dist!=null && b2.dist==null) return -1;
     if(a.dist==null && b2.dist!=null) return 1;
@@ -420,9 +433,13 @@ function assignmentSection(b){
   if(!ranked.length){
     return `<div class="no-match">No eligible worker found — no one in <b>${esc(b.market)}</b> is available ${fmtDate(b.date)} with an open slot. This is a scheduling exception to review.</div>`;
   }
+  const anyAlreadyWorking = ranked.some(r=>r.load>0);
   const rows = ranked.map((r,i)=>{
     const distTxt = r.dist!=null ? `${r.dist.toFixed(1)} mi away` : 'distance unknown';
-    const loadTxt = r.load===0 ? 'no jobs yet that day' : `${r.load} job${r.load>1?'s':''} that day`;
+    let loadTxt;
+    if(r.load>0){ loadTxt = `already has ${r.load} job${r.load>1?'s':''} nearby ✓`; }
+    else if(anyAlreadyWorking){ loadTxt = `would be a fresh trip (1 job only)`; }
+    else { loadTxt = `no one’s in the area yet`; }
     return `
     <div class="wsug ${i===0?'best':''}">
       <div class="wsug-info">
