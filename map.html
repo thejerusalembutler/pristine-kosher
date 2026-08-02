@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pristine Kosher — Season Map</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{
+    --teal:#20A59F; --teal-dark:#178079; --teal-soft:#E3F4F2;
+    --ink:#0A0A0A; --paper:#FFFFFF; --mist:#F4F6F5;
+    --line:#E4E8E7; --muted:#5C6663; --orange:#F78700;
+    --card:#FFFFFF; --radius:12px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{--teal:#2FBDB6;--teal-dark:#20A59F;--teal-soft:#123330;--ink:#F2F5F4;--paper:#0E1413;--mist:#0A0F0E;--line:#243230;--muted:#9AA7A4;--card:#141C1A}
+  }
+  :root[data-theme="light"]{--teal:#20A59F;--ink:#0A0A0A;--paper:#FFFFFF;--mist:#F4F6F5;--line:#E4E8E7;--muted:#5C6663;--card:#FFFFFF;--teal-soft:#E3F4F2}
+  :root[data-theme="dark"]{--teal:#2FBDB6;--ink:#F2F5F4;--paper:#0E1413;--mist:#0A0F0E;--line:#243230;--muted:#9AA7A4;--card:#141C1A;--teal-soft:#123330}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--mist);color:var(--ink);font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100vh}
+
+  .top{display:flex;align-items:center;gap:14px;padding:14px 24px;background:var(--ink);color:#fff;flex:none}
+  .top .mark{width:30px;height:30px}
+  .top .name{font-weight:800;letter-spacing:.12em;font-size:13px}
+  .top .name span{color:var(--teal)}
+  .top .crumb{margin-left:6px;padding-left:14px;border-left:1px solid #2a3432;font-size:13px;color:#9aa7a4}
+  .top .links{margin-left:auto;display:flex;gap:14px;font-size:13px}
+  .top .links a{color:#9aa7a4;text-decoration:none}
+  .top .links a:hover{color:#fff}
+
+  .controls{display:flex;gap:10px;align-items:center;padding:12px 24px;background:var(--paper);border-bottom:1px solid var(--line);flex:none;flex-wrap:wrap}
+  .controls select{font-family:inherit;font-size:13.5px;padding:8px 12px;border:1.5px solid var(--line);border-radius:9px;background:var(--card);color:inherit;cursor:pointer}
+  .controls select:focus{outline:none;border-color:var(--teal)}
+  .stat{font-size:13px;color:var(--muted);margin-left:auto}
+  .stat b{color:var(--ink);font-variant-numeric:tabular-nums}
+
+  #map{flex:1;width:100%}
+  .loading{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;color:var(--muted);font-size:14px}
+  .err{max-width:520px;margin:40px auto;padding:22px;background:var(--card);border:1px solid var(--orange);border-radius:12px;font-size:14px;line-height:1.6}
+  .err b{color:var(--ink)}
+
+  .gm-style .info b{color:#0A0A0A}
+  .infowin{font-family:inherit;font-size:13px;line-height:1.5;max-width:220px}
+  .infowin b{font-size:14px}
+  .infowin .meta{color:#555;font-size:12px}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <svg class="mark" viewBox="0 0 100 100" aria-hidden="true">
+    <rect x="8" y="14" width="40" height="72" fill="#fff"/>
+    <path d="M20 30 h14 a13 13 0 0 1 0 26 h-14 z" fill="#0A0A0A"/>
+    <rect x="20" y="30" width="6" height="26" fill="#0A0A0A"/>
+    <path d="M50 14 h22 L46 50 L72 86 H50 L28 52 z" fill="#20A59F"/>
+  </svg>
+  <div class="name">PRISTINE <span>KOSHER</span></div>
+  <div class="crumb">Season map — 2026</div>
+  <div class="links"><a href="dashboard.html">Dashboard</a><a href="calendar.html">Calendar</a></div>
+</div>
+
+<div class="controls">
+  <select id="fMarket"><option value="">All markets</option></select>
+  <select id="fWorker"><option value="">All workers</option></select>
+  <select id="fDay"><option value="">All days</option></select>
+  <div class="stat" id="stat">Loading…</div>
+</div>
+
+<div id="map"><div class="loading" id="loading">Loading your 2026 season…</div></div>
+
+<script>
+const SUPABASE_URL='https://qkgdobpazyoxesyiznus.supabase.co';
+const SUPABASE_KEY='sb_publishable_cjaMPpEPhe-HxUd616SSRg_ShraAso2';
+const GKEY='AIzaSyDiFIE0_u7OuBN0k9PkyUgNBLWVsAlz20I';
+
+let allJobs=[], markers=[], map, info;
+const $=s=>document.querySelector(s);
+const esc=x=>(x||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+
+// distinct color per market for quick visual clustering
+const PALETTE=['#20A59F','#F78700','#3B7DD8','#8659C4','#D64545','#2FA84F','#E8A400','#E0559C','#00A6A6','#7A5C3E','#5A7D2A','#B0413E'];
+const marketColor={};
+function colorFor(m){ if(!marketColor[m]){ marketColor[m]=PALETTE[Object.keys(marketColor).length%PALETTE.length]; } return marketColor[m]; }
+
+// Reads the SAFE public view (past_jobs_map): coordinates + market + worker + day + amount.
+// No customer names or street addresses — those stay in the locked past_jobs table.
+async function loadJobs(){
+  const url=`${SUPABASE_URL}/rest/v1/past_jobs_map?select=tech,service_area_clean,scheduled_raw,lat,lng,total&limit=2000`;
+  const res=await fetch(url,{headers:{apikey:SUPABASE_KEY,Authorization:`Bearer ${SUPABASE_KEY}`}});
+  if(!res.ok){ throw new Error('read blocked ('+res.status+')'); }
+  return res.json();
+}
+
+function dayOf(raw){ // "Tue Apr 28, 2026 08:45 am" -> "Tue Apr 28"
+  const m=(raw||'').match(/^(\w{3} \w{3} \d{1,2})/); return m?m[1]:'—';
+}
+
+function buildFilters(){
+  const markets=[...new Set(allJobs.map(j=>j.service_area_clean).filter(Boolean))].sort();
+  const workers=[...new Set(allJobs.map(j=>j.tech).filter(Boolean))].sort();
+  const days=[...new Set(allJobs.map(j=>dayOf(j.scheduled_raw)).filter(d=>d!=='—'))];
+  $('#fMarket').innerHTML='<option value="">All markets</option>'+markets.map(m=>`<option>${esc(m)}</option>`).join('');
+  $('#fWorker').innerHTML='<option value="">All workers</option>'+workers.map(w=>`<option>${esc(w)}</option>`).join('');
+  $('#fDay').innerHTML='<option value="">All days</option>'+days.map(d=>`<option>${esc(d)}</option>`).join('');
+}
+
+function visible(){
+  const m=$('#fMarket').value, w=$('#fWorker').value, d=$('#fDay').value;
+  return allJobs.filter(j=>
+    (!m||j.service_area_clean===m) && (!w||j.tech===w) && (!d||dayOf(j.scheduled_raw)===d));
+}
+
+function draw(){
+  markers.forEach(mk=>mk.setMap(null)); markers=[];
+  const jobs=visible();
+  const bounds=new google.maps.LatLngBounds();
+  jobs.forEach(j=>{
+    if(j.lat==null||j.lng==null) return;
+    const pos={lat:+j.lat,lng:+j.lng};
+    const mk=new google.maps.Marker({
+      position:pos, map,
+      icon:{path:google.maps.SymbolPath.CIRCLE, scale:5, fillColor:colorFor(j.service_area_clean),
+        fillOpacity:.85, strokeColor:'#fff', strokeWeight:1}
+    });
+    mk.addListener('click',()=>{
+      info.setContent(`<div class="infowin"><b>${esc(j.service_area_clean||'Job')}</b><br>
+        <span class="meta">${esc(dayOf(j.scheduled_raw))}</span><br>
+        Worker: ${esc(j.tech||'—')}<br>$${j.total||0}</div>`);
+      info.open(map,mk);
+    });
+    markers.push(mk); bounds.extend(pos);
+  });
+  if(jobs.length && !bounds.isEmpty()) map.fitBounds(bounds);
+  const total=allJobs.length;
+  $('#stat').innerHTML=`Showing <b>${jobs.length}</b> of ${total} geocoded jobs`;
+}
+
+async function init(){
+  try{
+    allJobs=await loadJobs();
+  }catch(e){
+    document.getElementById('map').innerHTML=`<div class="err"><b>Map data isn’t readable yet.</b><br><br>
+      Your historical jobs are stored <b>privately</b> (locked so customer addresses aren’t public) — which is correct for security.
+      To show them on this map we need a safe, coordinates-only public view. Tell me to set that up and this map will fill in.<br><br>
+      <span style="color:var(--muted)">(Technical: past_jobs read returned ${esc(e.message)})</span></div>`;
+    return;
+  }
+  map=new google.maps.Map(document.getElementById('map'),{
+    center:{lat:40.09,lng:-74.22}, zoom:7, mapTypeControl:false, streetViewControl:false
+  });
+  info=new google.maps.InfoWindow();
+  buildFilters(); draw();
+  ['#fMarket','#fWorker','#fDay'].forEach(s=>$(s).addEventListener('change',draw));
+}
+
+window.gmapsReady=init;
+</script>
+<script async
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDiFIE0_u7OuBN0k9PkyUgNBLWVsAlz20I&callback=gmapsReady">
+</script>
+</body>
+</html>
