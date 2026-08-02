@@ -54,6 +54,16 @@
   .arrbtn.sel{background:var(--teal-soft);border-color:var(--teal);color:var(--teal-dark)}
   .jaction{padding:16px 18px;border-top:1px solid var(--line);background:var(--mist)}
   .paylabel{font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:9px}
+  .checklist{display:grid;gap:6px;margin-bottom:10px}
+  .chkrow{display:flex;align-items:center;gap:10px;font-size:14.5px;padding:8px 12px;border:1.5px solid var(--line);border-radius:10px;cursor:pointer}
+  .chkrow input{width:18px;height:18px;accent-color:var(--teal)}
+  .extra{width:100%;box-sizing:border-box;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;font-family:inherit;font-size:14px;background:var(--card);color:inherit;resize:vertical}
+  .extra:focus{outline:none;border-color:var(--teal)}
+  .timegrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .timegrid label{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+  .timegrid label:last-child{grid-column:1/-1}
+  .timegrid input{padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;font-family:inherit;font-size:15px;background:var(--card);color:var(--ink)}
+  .timegrid input:focus{outline:none;border-color:var(--teal)}
   .paygrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
   .paybtn{font-family:inherit;font-size:14px;font-weight:600;padding:12px;border:1.5px solid var(--line);border-radius:11px;background:var(--card);color:inherit;cursor:pointer;text-align:center;transition:border-color .12s,background .12s}
   .paybtn:hover{border-color:var(--teal)}
@@ -134,13 +144,22 @@ function arrivalMessage(key,customer){
   return msgs[key]||'';
 }
 function fmt12(t){ if(!t) return ''; let [h,m]=t.split(':').map(Number); const ap=h>=12?'PM':'AM'; let hh=h%12||12; return `${hh}:${String(m).padStart(2,'0')} ${ap}`; }
+const ITEM_NAMES={stovetop:'Stovetop',warming:'Warming drawer',microwave:'Microwave',oven:'Oven'};
 function serviceLabel(b){
   if(b.base==='sinks') return `Sinks only · ${b.sink_count||'?'} sink${b.sink_count>1?'s':''}`;
   let s=`Counters · ${b.size?b.size[0].toUpperCase()+b.size.slice(1):'—'}`;
-  const names={stovetop:'Stovetop',warming:'Warming drawer',microwave:'Microwave',oven:'Oven'};
-  const extras=(b.addons||[]).map(a=>names[a]||a);
+  const extras=(b.addons||[]).map(a=>ITEM_NAMES[a]||a);
   if(b.island) extras.push(`${b.island[0].toUpperCase()+b.island.slice(1)} island`);
   return extras.length ? `${s} + ${extras.join(', ')}` : s;
+}
+// the full list of items ordered on a booking, as {key,label} for the checklist
+function orderedItems(b){
+  const items=[];
+  if(b.base==='sinks'){ items.push({key:'sinks',label:`${b.sink_count||'?'} sink${b.sink_count>1?'s':''}`}); }
+  else { items.push({key:'counters',label:`Counters & sinks (${b.size||'—'})`}); }
+  (b.addons||[]).forEach(a=>items.push({key:a,label:ITEM_NAMES[a]||a}));
+  if(b.island) items.push({key:'island',label:`${b.island[0].toUpperCase()+b.island.slice(1)} island`});
+  return items;
 }
 
 // Identify the logged-in worker: find the worker record linked to this login.
@@ -169,10 +188,15 @@ async function loadJobs(){
 function render(){
   if(!jobs.length){ $('#jobs').innerHTML='<div class="msg">No jobs assigned to you on this date.</div>'; $('#daysum').innerHTML=''; return; }
   const doneCount=jobs.filter(j=>j.completed).length;
-  const owed=jobs.filter(j=>!j.completed || j.payment_method==='unpaid').reduce((s,j)=>s+(j.estimate||0),0);
-  $('#daysum').innerHTML=`<div class="daysum"><div><div class="l">Today</div><div class="v">${jobs.length} jobs</div></div>
-    <div style="text-align:center"><div class="l">Done</div><div class="v">${doneCount}/${jobs.length}</div></div>
-    <div style="text-align:right"><div class="l">Left to collect</div><div class="v">$${owed}</div></div></div>`;
+  // hours worked (kitchen + driving) and cash-on-hand (cash/check collected) from completed jobs
+  const totalMin=jobs.reduce((s,j)=>s+(j.work_minutes||0)+(j.drive_minutes||0),0);
+  const hours=(totalMin/60).toFixed(1);
+  const cashOnHand=jobs.reduce((s,j)=>s+(+j.cash_collected||0),0);
+  $('#daysum').innerHTML=`<div class="daysum">
+      <div><div class="l">Jobs done</div><div class="v">${doneCount}/${jobs.length}</div></div>
+      <div style="text-align:center"><div class="l">Hours</div><div class="v">${hours}</div></div>
+      <div style="text-align:right"><div class="l">Cash on hand</div><div class="v">$${cashOnHand}</div></div>
+    </div>`;
 
   $('#jobs').innerHTML=jobs.map(j=>{
     const digits=(j.phone||'').replace(/[^0-9]/g,'');
@@ -201,7 +225,20 @@ function render(){
         </div>
       </div>
       <div class="jaction">
-        <div class="paylabel">How did they pay?</div>
+        <div class="paylabel">What did you do? (check off)</div>
+        <div class="checklist">
+          ${orderedItems(j).map(it=>`<label class="chkrow"><input type="checkbox" class="itemchk" data-item="${it.key}"> ${esc(it.label)}</label>`).join('')}
+        </div>
+        <textarea class="extra" placeholder="Anything extra you did on-site…" rows="2"></textarea>
+
+        <div class="paylabel" style="margin-top:14px">Time & money</div>
+        <div class="timegrid">
+          <label>Kitchen time (min)<input type="number" class="fWork" min="0" placeholder="60"></label>
+          <label>Driving time (min)<input type="number" class="fDrive" min="0" placeholder="15"></label>
+          <label>Cash/check collected ($)<input type="number" class="fCash" min="0" placeholder="0"></label>
+        </div>
+
+        <div class="paylabel" style="margin-top:14px">How did they pay?</div>
         <div class="paygrid">
           <button class="paybtn" data-pay="zelle" data-id="${j.id}">Zelle</button>
           <button class="paybtn" data-pay="cash" data-id="${j.id}">Cash</button>
@@ -245,8 +282,19 @@ function render(){
 }
 
 async function markDone(id,pay){
-  const body={completed:true,completed_at:new Date().toISOString(),payment_method:pay,
-    payment_note:(pay==='unpaid'?'office follow-up':''),status:'confirmed'};
+  // gather the checklist, extra notes, hours, and cash from this job's card
+  const card=document.querySelector(`.job[data-job="${id}"]`);
+  const itemsDone=[...card.querySelectorAll('.itemchk:checked')].map(c=>c.dataset.item);
+  const extra=card.querySelector('.extra').value.trim();
+  const workMin=+card.querySelector('.fWork').value||null;
+  const driveMin=+card.querySelector('.fDrive').value||null;
+  const cash=+card.querySelector('.fCash').value||0;
+  const body={
+    completed:true, completed_at:new Date().toISOString(), payment_method:pay,
+    payment_note:(pay==='unpaid'?'office follow-up':''), status:'confirmed',
+    items_done:itemsDone, worker_notes:extra||null,
+    work_minutes:workMin, drive_minutes:driveMin, cash_collected:cash
+  };
   await fetch(`${SUPABASE_URL}/rest/v1/bookings?id=eq.${id}`,{method:'PATCH',
     headers:{...H(),'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify(body)});
   loadJobs();
