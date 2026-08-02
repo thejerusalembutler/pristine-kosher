@@ -35,7 +35,11 @@
   .top .name{font-weight:800;letter-spacing:.12em;font-size:13px}
   .top .name span{color:var(--teal);font-weight:600}
   .top .crumb{margin-left:6px;padding-left:16px;border-left:1px solid #2a3432;font-size:13px;color:#9aa7a4}
-  .top .themebtn{margin-left:auto;background:none;border:1px solid #2a3432;color:#9aa7a4;border-radius:8px;width:34px;height:34px;cursor:pointer;font-size:15px}
+  .top .navlinks{margin-left:auto;display:flex;gap:16px;font-size:13px}
+  .top .navlinks a{color:#9aa7a4;text-decoration:none;transition:color .12s}
+  .top .navlinks a:hover{color:#fff}
+  .top .themebtn{background:none;border:1px solid #2a3432;color:#9aa7a4;border-radius:8px;width:34px;height:34px;cursor:pointer;font-size:15px}
+  @media (max-width:720px){ .top .navlinks{display:none} }
   .top .themebtn:hover{border-color:var(--teal);color:var(--teal)}
 
   .page{max-width:1120px;margin:0 auto;padding:24px 28px 60px}
@@ -146,6 +150,12 @@
   </svg>
   <div class="name">PRISTINE <span>KOSHER</span></div>
   <div class="crumb">Operations dashboard</div>
+  <div class="navlinks">
+    <a href="calendar.html">Calendar</a>
+    <a href="route.html">Routes</a>
+    <a href="map.html">Map</a>
+    <a href="worker.html">Worker view</a>
+  </div>
   <button class="themebtn" id="theme" title="Switch light / dark" aria-label="Switch theme">◑</button>
 </div>
 
