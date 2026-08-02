@@ -215,7 +215,8 @@ function fromDb(r){
     email: r.email || '',
     address: r.address || '',
     notes: r.notes || '',
-    assignedWorkerId: r.assigned_worker_id || null
+    assignedWorkerId: r.assigned_worker_id || null,
+    lat: r.lat, lng: r.lng
   };
 }
 
@@ -259,20 +260,29 @@ async function loadWorkers(){
   }catch(err){ console.error('Load workers error:', err); }
 }
 
+/* Straight-line distance between two lat/lng points, in miles (Haversine).
+   Good proxy for "who's nearby"; real drive-time is a later upgrade. */
+function milesBetween(lat1,lng1,lat2,lng2){
+  if(lat1==null||lng1==null||lat2==null||lng2==null) return null;
+  const R=3959, toRad=d=>d*Math.PI/180;
+  const dLat=toRad(lat2-lat1), dLng=toRad(lng2-lng1);
+  const a=Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
 /* ---------------- The scheduler: rank eligible workers for a booking ----------------
    Hard rules (must pass): serves the booking's market, available that date,
    has a car, not already booked at that time.
-   Ranking: lightest current workload first (spread the jobs). */
+   Ranking: NEAREST worker first (real distance from worker home → booking),
+   then lightest workload as a tiebreak. */
 function eligibleWorkers(b){
   const marketName = b.market;
-  const date = b.date;                       // "YYYY-MM-DD"
-  const time = b.time;                        // "HH:MM"
-  // how many jobs each worker already has that day (for workload + double-book check)
-  const dayLoad = {}; const busyAt = {};
+  const date = b.date, time = b.time;
+  const dayLoad = {}, busyAt = {};
   bookings.forEach(x=>{
     if(x.assignedWorkerId && x.date===date){
       dayLoad[x.assignedWorkerId] = (dayLoad[x.assignedWorkerId]||0)+1;
-      if(x.time===time) busyAt[x.assignedWorkerId]=true;   // same slot = conflict
+      if(x.time===time) busyAt[x.assignedWorkerId]=true;
     }
   });
   return workersData.map(w=>{
@@ -281,13 +291,17 @@ function eligibleWorkers(b){
     const hasCar = w.has_car !== false;
     const doubleBooked = !!busyAt[w.id];
     const eligible = servesMarket && avail && hasCar && !doubleBooked && (w.status!=='inactive');
-    return {
-      worker:w, eligible, servesMarket, avail, hasCar, doubleBooked,
-      load: dayLoad[w.id]||0
-    };
+    const dist = milesBetween(w.lat, w.lng, b.lat, b.lng);   // miles, or null if no coords
+    return { worker:w, eligible, servesMarket, avail, hasCar, doubleBooked, load: dayLoad[w.id]||0, dist };
   })
   .filter(r=>r.eligible)
-  .sort((a,b2)=> a.load - b2.load || a.worker.name.localeCompare(b2.worker.name));
+  .sort((a,b2)=>{
+    // nearest first; workers with a known distance rank above those without; workload breaks ties
+    if(a.dist!=null && b2.dist!=null && Math.abs(a.dist-b2.dist)>0.5) return a.dist - b2.dist;
+    if(a.dist!=null && b2.dist==null) return -1;
+    if(a.dist==null && b2.dist!=null) return 1;
+    return a.load - b2.load || a.worker.name.localeCompare(b2.worker.name);
+  });
 }
 
 /* Applications load from the real `applications` table (starts empty). */
@@ -406,15 +420,19 @@ function assignmentSection(b){
   if(!ranked.length){
     return `<div class="no-match">No eligible worker found — no one in <b>${esc(b.market)}</b> is available ${fmtDate(b.date)} with an open slot. This is a scheduling exception to review.</div>`;
   }
-  const rows = ranked.map((r,i)=>`
+  const rows = ranked.map((r,i)=>{
+    const distTxt = r.dist!=null ? `${r.dist.toFixed(1)} mi away` : 'distance unknown';
+    const loadTxt = r.load===0 ? 'no jobs yet that day' : `${r.load} job${r.load>1?'s':''} that day`;
+    return `
     <div class="wsug ${i===0?'best':''}">
       <div class="wsug-info">
         <div class="wsug-name">${i===0?'★ ':''}${esc(r.worker.name)}</div>
-        <div class="wsug-why">${r.load===0?'No jobs yet that day':`${r.load} job${r.load>1?'s':''} that day`} · ${r.worker.has_car?'has car':'no car'}</div>
+        <div class="wsug-why">${distTxt} · ${loadTxt}</div>
       </div>
       <button class="btn approve mini" onclick="assignWorker('${b.id}','${r.worker.id}')">Assign</button>
-    </div>`).join('');
-  return `<div class="sug-hint">AI suggests — top pick starred. You confirm.</div>${rows}`;
+    </div>`;
+  }).join('');
+  return `<div class="sug-hint">Ranked by nearest available worker. Top pick starred — you confirm.</div>${rows}`;
 }
 
 window.assignWorker = async (bookingId, workerId) => {
