@@ -141,6 +141,24 @@
 </head>
 <body>
 
+<!-- Login gate: covers the page until a staff member is signed in -->
+<div id="loginGate" style="position:fixed;inset:0;z-index:100;background:var(--ink);display:flex;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--card);border:1px solid var(--line);border-radius:16px;padding:32px;max-width:360px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.4)">
+    <svg width="44" height="44" viewBox="0 0 100 100" style="display:block;margin:0 auto 16px" aria-hidden="true">
+      <rect x="8" y="14" width="40" height="72" fill="var(--ink)"/>
+      <path d="M20 30 h14 a13 13 0 0 1 0 26 h-14 z" fill="var(--card)"/>
+      <rect x="20" y="30" width="6" height="26" fill="var(--card)"/>
+      <path d="M50 14 h22 L46 50 L72 86 H50 L28 52 z" fill="#20A59F"/>
+    </svg>
+    <h2 style="text-align:center;margin:0 0 4px;font-size:19px">Staff sign-in</h2>
+    <p style="text-align:center;color:var(--muted);font-size:13px;margin:0 0 20px">Pristine Kosher operations</p>
+    <input id="loginEmail" type="email" placeholder="Email" autocomplete="username" style="width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:10px;font-size:15px;margin-bottom:10px;background:var(--paper);color:var(--ink)">
+    <input id="loginPass" type="password" placeholder="Password" autocomplete="current-password" style="width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:10px;font-size:15px;margin-bottom:14px;background:var(--paper);color:var(--ink)">
+    <button id="loginBtn" style="width:100%;padding:13px;background:var(--teal);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">Sign in</button>
+    <div id="loginErr" style="color:var(--orange);font-size:13px;text-align:center;margin-top:12px;min-height:18px"></div>
+  </div>
+</div>
+
 <div class="top">
   <svg class="mark" viewBox="0 0 100 100" aria-hidden="true">
     <rect x="8" y="14" width="40" height="72" fill="#fff"/>
@@ -657,10 +675,14 @@ $('#apFilters').querySelectorAll('button').forEach(b=>b.addEventListener('click'
 }));
 
 function renderAll(){ renderTiles(); renderBookings(); renderApplications(); }
-renderAll();          // draw immediately (applications demo data + empty bookings)
-loadWorkers();        // load workers + market links (for the scheduler)
-loadBookings();       // then fetch real bookings from the database and re-draw
-loadApplications();   // and fetch real worker applications
+
+// Dashboard data only loads AFTER a staff member is signed in (see auth gate below).
+function startDashboard(){
+  renderAll();          // draw immediately
+  loadWorkers();        // load workers + market links (for the scheduler)
+  loadBookings();       // fetch real bookings
+  loadApplications();   // fetch real worker applications
+}
 
 /* theme */
 $('#theme').addEventListener('click',()=>{
@@ -668,6 +690,57 @@ $('#theme').addEventListener('click',()=>{
   const sysDark=matchMedia('(prefers-color-scheme: dark)').matches;
   document.documentElement.setAttribute('data-theme', cur?(cur==='dark'?'light':'dark'):(sysDark?'light':'dark'));
 });
+
+/* ---------------- Staff login gate ----------------
+   Uses Supabase Auth (email + password) via its REST endpoint — no library needed.
+   The page stays hidden behind the gate until sign-in succeeds. A saved session
+   (token in localStorage) lets you stay logged in across visits. */
+const AUTH = `${SUPABASE_URL}/auth/v1`;
+const TOKEN_KEY = 'pk_staff_token';
+
+async function checkSession(){
+  const token = localStorage.getItem(TOKEN_KEY);
+  if(!token) return false;
+  // validate the token by asking who we are
+  const res = await fetch(`${AUTH}/user`, { headers:{ apikey:SUPABASE_KEY, Authorization:`Bearer ${token}` } });
+  return res.ok;
+}
+async function doLogin(email, password){
+  const res = await fetch(`${AUTH}/token?grant_type=password`, {
+    method:'POST',
+    headers:{ apikey:SUPABASE_KEY, 'Content-Type':'application/json' },
+    body: JSON.stringify({ email, password })
+  });
+  const data = await res.json();
+  if(res.ok && data.access_token){
+    localStorage.setItem(TOKEN_KEY, data.access_token);
+    return true;
+  }
+  throw new Error(data.error_description || data.msg || 'Wrong email or password.');
+}
+function unlock(){
+  document.getElementById('loginGate').style.display = 'none';
+  startDashboard();
+}
+
+document.getElementById('loginBtn').addEventListener('click', async ()=>{
+  const err = document.getElementById('loginErr');
+  err.textContent = '';
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass  = document.getElementById('loginPass').value;
+  if(!email || !pass){ err.textContent = 'Enter your email and password.'; return; }
+  try{
+    await doLogin(email, pass);
+    unlock();
+  }catch(e){ err.textContent = e.message; }
+});
+document.getElementById('loginPass').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('loginBtn').click(); });
+
+// On load: if already signed in, skip the gate; otherwise show it.
+(async ()=>{
+  if(await checkSession()) unlock();
+  // else the gate stays visible (it's shown by default)
+})();
 </script>
 </body>
 </html>
