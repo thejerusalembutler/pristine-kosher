@@ -199,6 +199,7 @@
     .row2{grid-template-columns:1fr}
   }
 </style>
+<script src="https://js.stripe.com/v3/"></script>
 </head>
 <body>
 
@@ -245,6 +246,12 @@
 /* ---------------- Supabase connection ---------------- */
 const SUPABASE_URL = 'https://qkgdobpazyoxesyiznus.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_cjaMPpEPhe-HxUd616SSRg_ShraAso2';
+const STRIPE_PK = 'pk_test_51LsrmUDBHCYBg3clYbL2wdPnjq9OCeaUK0e1meG2BhcD6fCkUkOLioVoRktjQhI6XIorsMf62aKqk3Gtl7VCrRBG002bKO3tqg';
+let stripe=null, cardElement=null;
+function initStripe(){
+  if(!window.Stripe) return;
+  if(!stripe) stripe = Stripe(STRIPE_PK);
+}
 
 /* ---------------- Google address autocomplete ----------------
    Attaches a Google dropdown to the address field. When the customer picks
@@ -297,6 +304,9 @@ async function saveBooking(){
     lat: state.lat || null,     // captured from address autocomplete
     lng: state.lng || null
   };
+  // generate the id client-side so we know it without needing SELECT permission back
+  const newId = (crypto.randomUUID ? crypto.randomUUID() : ('x'+Date.now()+Math.random()));
+  record.id = newId;
   try{
     const res = await fetch(`${SUPABASE_URL}/rest/v1/bookings`, {
       method:'POST',
@@ -308,9 +318,9 @@ async function saveBooking(){
       },
       body: JSON.stringify(record)
     });
-    if(!res.ok){ console.error('Save failed:', res.status, await res.text()); return false; }
-    return true;
-  }catch(err){ console.error('Save error:', err); return false; }
+    if(!res.ok){ console.error('Save failed:', res.status, await res.text()); return null; }
+    return newId;   // booking id, for attaching payment
+  }catch(err){ console.error('Save error:', err); return null; }
 }
 
 /* ---------------- Pricing (single source of truth) ---------------- */
@@ -349,6 +359,7 @@ function buildSteps(){
   s.push({id:'time',label:'Pick a time'});
   s.push({id:'contact',label:'Your details'});
   s.push({id:'review',label:'Review & book'});
+  s.push({id:'payment',label:'Confirm with card'});
   return s;
 }
 let STEPS = buildSteps();
@@ -531,7 +542,22 @@ function render(){
           ${rrow('Address', state.address, 'contact')}
         </div>
         <div class="total"><span class="k">Estimated total</span><span class="v">${money(total())}</span></div>
-        <div class="note">🛈 <span>This is a starting estimate. A team member confirms your final price and time, and reviews any address near a service boundary — we never auto-decline.</span></div>`;
+        <div class="note">🛈 <span>Next you’ll add a card to confirm — a <b>$100 deposit</b> secures your booking, and the balance is charged after the job. This is a starting estimate; a team member confirms your final price.</span></div>`;
+  }
+
+  else if(s.id==='payment'){
+    html = head('Confirm your booking',
+      'Add a card to lock in your appointment. We charge a <b>$100 deposit</b> now; the rest is charged after your kitchen is kashered.')
+      + `<div class="review" style="margin-bottom:16px">
+          <div class="rrow"><span class="k">Deposit today</span><span class="v">$100</span></div>
+          <div class="rrow"><span class="k">Estimated total</span><span class="v">${money(total())}</span></div>
+          <div class="rrow"><span class="k">Balance after job</span><span class="v">${money(Math.max(0,total()-100))}</span></div>
+        </div>
+        <div class="field"><label>Card details</label>
+          <div id="card-element" style="padding:14px;border:1.5px solid var(--line);border-radius:11px;background:var(--card)"></div>
+          <div class="err" id="card-err" style="display:block;color:var(--orange);font-size:13px;margin-top:8px;min-height:16px"></div>
+        </div>
+        <div class="note" style="margin-top:12px">🔒 <span>Your card is handled securely by Stripe — we never see or store your full card number.</span></div>`;
   }
 
   slot.className='card-q anim-in';
@@ -656,6 +682,25 @@ function fmtDate(d){if(!d)return '';const dt=new Date(d+'T00:00');return dt.toLo
 function bindStep(){
   const s = STEPS[step];
 
+  // Payment step: mount the Stripe card field
+  if(s.id==='payment'){
+    initStripe();
+    if(stripe){
+      const elements = stripe.elements();
+      cardElement = elements.create('card', {style:{base:{fontSize:'16px'}}});
+      const mount = slot.querySelector('#card-element');
+      if(mount) cardElement.mount(mount);
+      cardElement.on('change', ev=>{
+        const err = slot.querySelector('#card-err');
+        if(err) err.textContent = ev.error ? ev.error.message : '';
+        paintNav();
+      });
+    } else {
+      const err = slot.querySelector('#card-err');
+      if(err) err.textContent = 'Payment is loading… if this persists, refresh the page.';
+    }
+  }
+
   // single-select value cards (market, base, size, sinks, flex)
   slot.querySelectorAll('.opt[data-v]').forEach(btn=>{
     btn.addEventListener('click',()=>{
@@ -769,20 +814,56 @@ function stepValid(){
 }
 function paintNav(){
   $('#next').disabled = !stepValid();
-  $('#next').textContent = STEPS[step].id==='review' ? 'Confirm booking' : 'Continue';
+  const id = STEPS[step].id;
+  $('#next').textContent = id==='review' ? 'Continue to payment →'
+    : id==='payment' ? 'Pay $100 & book' : 'Continue';
   $('#back').classList.toggle('hidden', step===0);
 }
-function go(dir){
+async function go(dir){
   if(dir>0){
     if(STEPS[step].id==='contact' && !stepValid()){
       [['#n','name'],['#p','phone'],['#a','address']].forEach(([sel,k])=>{ if(!state[k]) slot.querySelector(sel)?.closest('.field')?.classList.add('invalid'); });
       return;
     }
     if(!stepValid()) return;
-    if(STEPS[step].id==='review'){ done=true; render(); saveBooking(); return; }
+    // Payment step: charge the card + save the booking, then finish
+    if(STEPS[step].id==='payment'){ await handlePayment(); return; }
     step=Math.min(step+1,STEPS.length-1);
   } else { step=Math.max(step-1,0); }
   render();
+}
+
+/* Charge the deposit + save card via Stripe, then create the booking. */
+async function handlePayment(){
+  const btn = $('#next'), err = slot.querySelector('#card-err');
+  if(!stripe || !cardElement){ if(err) err.textContent='Payment not ready — refresh and try again.'; return; }
+  btn.disabled = true; btn.textContent = 'Processing…'; if(err) err.textContent='';
+  try{
+    // 1. turn the card into a secure token (card details never touch our server)
+    const { paymentMethod, error } = await stripe.createPaymentMethod({
+      type:'card', card:cardElement, billing_details:{ name:state.name, email:state.email }
+    });
+    if(error){ if(err) err.textContent=error.message; btn.disabled=false; paintNav(); return; }
+
+    // 2. save the booking first so we have an id to attach payment to
+    const bookingId = await saveBooking();
+
+    // 3. charge deposit + save card on file (server-side)
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/stripe-pay`,{
+      method:'POST',
+      headers:{ apikey:SUPABASE_KEY, Authorization:`Bearer ${SUPABASE_KEY}`, 'Content-Type':'application/json' },
+      body: JSON.stringify({ action:'setup', payment_method:paymentMethod.id, email:state.email, name:state.name, booking_id:bookingId })
+    });
+    const data = await res.json();
+    if(!data.ok){ if(err) err.textContent = data.error || 'Payment failed — please try another card.'; btn.disabled=false; paintNav(); return; }
+
+    // success!
+    state._last4 = data.last4;
+    done=true; render();
+  }catch(e){
+    if(err) err.textContent = 'Something went wrong. Please try again.';
+    btn.disabled=false; paintNav();
+  }
 }
 $('#next').addEventListener('click',()=>go(1));
 $('#back').addEventListener('click',()=>go(-1));
@@ -809,7 +890,7 @@ function renderDone(){
     <div class="big"><svg width="34" height="34" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
     <p class="eyebrow" style="text-align:center">Request received</p>
     <h1>Thanks, ${esc(state.name.split(' ')[0]||'there')} — we’ve got it.</h1>
-    <p class="sub" style="max-width:460px">A Pristine Kosher team member will confirm your final price (estimate: <b>${money(total())}</b>) and time shortly. You asked for <b>${fmtTime(state.time)}</b> — ${state.flex==='exact'?'we’ll protect that exact time':'we’ll aim for that, with a little flexibility to plan a smart route'}.</p>
+    <p class="sub" style="max-width:460px">Your <b>$100 deposit</b> is paid${state._last4?` (card ending ${esc(state._last4)})`:''} and your booking is confirmed. A receipt is on its way to your email. A team member will confirm your final price (estimate: <b>${money(total())}</b>) and time — the balance is charged after your kitchen is kashered.</p>
     <button class="btn primary" id="again" style="margin-top:8px">Book another kitchen</button>
     <details style="margin-top:22px;max-width:480px;width:100%;text-align:left">
       <summary style="cursor:pointer;color:var(--muted);font-size:13px">See the booking record we created</summary>
