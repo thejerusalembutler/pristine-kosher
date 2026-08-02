@@ -204,8 +204,8 @@ function serviceLabel(b){
 async function load(){
   try{
     const [bRes,wRes] = await Promise.all([
-      fetch(`${SUPABASE_URL}/rest/v1/bookings?select=*&order=service_date.asc`, {headers:{apikey:SUPABASE_KEY,Authorization:`Bearer ${SUPABASE_KEY}`}}),
-      fetch(`${SUPABASE_URL}/rest/v1/workers?select=id,name&order=name.asc`, {headers:{apikey:SUPABASE_KEY,Authorization:`Bearer ${SUPABASE_KEY}`}})
+      fetch(`${SUPABASE_URL}/rest/v1/bookings?select=*&order=service_date.asc`, {headers:{apikey:SUPABASE_KEY,Authorization:`Bearer ${localStorage.getItem("pk_staff_token")||SUPABASE_KEY}`}}),
+      fetch(`${SUPABASE_URL}/rest/v1/workers?select=id,name&order=name.asc`, {headers:{apikey:SUPABASE_KEY,Authorization:`Bearer ${localStorage.getItem("pk_staff_token")||SUPABASE_KEY}`}})
     ]);
     bookings = bRes.ok ? await bRes.json() : [];
     workers = wRes.ok ? await wRes.json() : [];

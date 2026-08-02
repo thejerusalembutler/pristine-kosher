@@ -94,7 +94,7 @@
 <script>
 const SUPABASE_URL='https://qkgdobpazyoxesyiznus.supabase.co';
 const SUPABASE_KEY='sb_publishable_cjaMPpEPhe-HxUd616SSRg_ShraAso2';
-const H={apikey:SUPABASE_KEY,Authorization:`Bearer ${SUPABASE_KEY}`};
+const H={apikey:SUPABASE_KEY,Authorization:`Bearer ${localStorage.getItem("pk_staff_token")||SUPABASE_KEY}`};
 const $=s=>document.querySelector(s);
 const esc=x=>(x||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
 let workers=[], jobs=[];

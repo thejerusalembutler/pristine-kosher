@@ -66,6 +66,16 @@
     setTimeout(()=>gate.querySelector('#pkEmail').focus(),100);
   }
 
+  // Auth headers for data requests: use the logged-in user's token so RLS
+  // can recognize a signed-in staff member. Falls back to the publishable key.
+  function authHeaders(extra){
+    const t = token();
+    return Object.assign({
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${t || SUPABASE_KEY}`
+    }, extra||{});
+  }
+
   // public API
   window.PKAuth = {
     async protect(onReady){
@@ -73,6 +83,8 @@
       else { showGate(onReady); }
     },
     logout,
-    token
+    token,
+    headers: authHeaders,
+    SUPABASE_URL, SUPABASE_KEY
   };
 })();

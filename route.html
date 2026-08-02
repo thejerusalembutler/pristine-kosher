@@ -93,7 +93,7 @@ const esc=x=>(x||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&q
 
 async function loadWorkers(){
   const res=await fetch(`${SUPABASE_URL}/rest/v1/workers?select=id,name,home_base,lat,lng&order=name.asc`,
-    {headers:{apikey:SUPABASE_KEY,Authorization:`Bearer ${SUPABASE_KEY}`}});
+    {headers:{apikey:SUPABASE_KEY,Authorization:`Bearer ${localStorage.getItem("pk_staff_token")||SUPABASE_KEY}`}});
   workers = res.ok ? await res.json() : [];
   $('#worker').innerHTML='<option value="">Choose a worker…</option>'+
     workers.map(w=>`<option value="${w.id}">${esc(w.name)}</option>`).join('');
@@ -101,7 +101,7 @@ async function loadWorkers(){
 
 async function jobsFor(workerId,date){
   const url=`${SUPABASE_URL}/rest/v1/bookings?select=customer_name,address,market,time_slot,lat,lng&assigned_worker_id=eq.${workerId}&service_date=eq.${date}&order=time_slot.asc`;
-  const res=await fetch(url,{headers:{apikey:SUPABASE_KEY,Authorization:`Bearer ${SUPABASE_KEY}`}});
+  const res=await fetch(url,{headers:{apikey:SUPABASE_KEY,Authorization:`Bearer ${localStorage.getItem("pk_staff_token")||SUPABASE_KEY}`}});
   return res.ok ? (await res.json()).filter(j=>j.lat!=null&&j.lng!=null) : [];
 }
 
