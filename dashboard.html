@@ -215,12 +215,42 @@ async function loadBookings(){
   }catch(err){ console.error('Load error:', err); }
 }
 
-let applications = [
-  {id:'a1',name:'Moshe Adler',market:'Lakewood',phone:'(732) 555-0200',email:'moshe.a@email.com',car:'yes',comm:'whatsapp',returning:'yes',years:'2025',yeshiva:'BMG',estHours:118,fullDays:14,partDays:2,status:'pending'},
-  {id:'a2',name:'Eli Stern',market:'Five Towns',phone:'(516) 555-0231',email:'eli.stern@email.com',car:'yes',comm:'sms',returning:'no',years:'',yeshiva:'Sh’or Yoshuv',estHours:96,fullDays:11,partDays:3,status:'pending'},
-  {id:'a3',name:'Shmuel Berger',market:'Baltimore',phone:'(410) 555-0175',email:'sberger@email.com',car:'no',comm:'whatsapp',returning:'no',years:'',yeshiva:'Ner Yisroel',estHours:40,fullDays:4,partDays:2,status:'pending'},
-  {id:'a4',name:'Chaim Fisher',market:'Lakewood',phone:'(732) 555-0288',email:'cfisher@email.com',car:'yes',comm:'whatsapp',returning:'yes',years:'2023, 2025',yeshiva:'BMG',estHours:130,fullDays:16,partDays:0,status:'approved'}
-];
+/* Applications load from the real `applications` table (starts empty). */
+let applications = [];
+
+/* Turn a raw application row into the shape the dashboard renders. */
+function appFromDb(r){
+  return {
+    id: r.id,
+    name: r.full_name || 'No name',
+    market: r.market || '—',
+    phone: r.phone || '',
+    email: r.email || '',
+    car: r.has_car ? 'yes' : 'no',
+    comm: r.communication || '',
+    returning: r.is_returning ? 'yes' : 'no',
+    years: r.prior_years || '',
+    yeshiva: r.yeshiva || '',
+    estHours: r.est_hours || 0,
+    fullDays: r.full_days || 0,
+    partDays: r.part_days || 0,
+    status: r.status || 'pending',
+    _raw: r    // keep the full row so we can create a worker on approval
+  };
+}
+
+/* Fetch all applications from Supabase, newest first. */
+async function loadApplications(){
+  try{
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/applications?select=*&order=created_at.desc`, {
+      headers:{ 'apikey':SUPABASE_KEY, 'Authorization':`Bearer ${SUPABASE_KEY}` }
+    });
+    if(!res.ok){ console.error('Load applications failed:', res.status, await res.text()); return; }
+    const rows = await res.json();
+    applications = rows.map(appFromDb);
+    renderAll();
+  }catch(err){ console.error('Load applications error:', err); }
+}
 
 const STATUS_LABEL = {new:'New',needs:'Needs info',review:'Needs review',confirmed:'Confirmed',declined:'Declined',pending:'Pending',approved:'Approved'};
 const ATTN_BOOKING = s => ['new','needs','review'].includes(s);
@@ -366,7 +396,60 @@ function openApplication(id){
         </div>`}`;
   openDrawer();
 }
-window.setApp=(id,status)=>{ applications.find(a=>a.id===id).status=status; renderAll(); closeDrawer(); };
+window.setApp=async(id,status)=>{
+  const app = applications.find(a=>a.id===id);
+  app.status=status; renderAll(); closeDrawer();
+
+  // 1. update the application's status in the database
+  try{
+    await fetch(`${SUPABASE_URL}/rest/v1/applications?id=eq.${id}`, {
+      method:'PATCH',
+      headers:{ 'Content-Type':'application/json', 'apikey':SUPABASE_KEY, 'Authorization':`Bearer ${SUPABASE_KEY}`, 'Prefer':'return=minimal' },
+      body: JSON.stringify({status})
+    });
+  }catch(err){ console.error('Application status update failed:', err); }
+
+  // 2. if approved, create a WORKER from this application (carries availability + market)
+  if(status==='approved'){
+    const r = app._raw || {};
+    const worker = {
+      name: r.full_name,
+      phone: r.phone,
+      email: r.email,
+      home_base: r.address || r.market,
+      hourly_rate: 30,
+      has_car: r.has_car,
+      travel_flexibility: 'medium',
+      availability: r.availability,
+      status: 'active',
+      application_id: r.id
+    };
+    try{
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/workers`, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', 'apikey':SUPABASE_KEY, 'Authorization':`Bearer ${SUPABASE_KEY}`, 'Prefer':'return=representation' },
+        body: JSON.stringify(worker)
+      });
+      if(res.ok){
+        const [created] = await res.json();
+        // link the worker to their market (many-to-many), if the market name matches one of ours
+        if(created && r.market){
+          const mRes = await fetch(`${SUPABASE_URL}/rest/v1/markets?select=id&name=eq.${encodeURIComponent(r.market)}`, {
+            headers:{ 'apikey':SUPABASE_KEY, 'Authorization':`Bearer ${SUPABASE_KEY}` }
+          });
+          const markets = mRes.ok ? await mRes.json() : [];
+          if(markets[0]){
+            await fetch(`${SUPABASE_URL}/rest/v1/worker_markets`, {
+              method:'POST',
+              headers:{ 'Content-Type':'application/json', 'apikey':SUPABASE_KEY, 'Authorization':`Bearer ${SUPABASE_KEY}`, 'Prefer':'return=minimal' },
+              body: JSON.stringify({ worker_id: created.id, market_id: markets[0].id })
+            });
+          }
+        }
+      } else { console.error('Create worker failed:', res.status, await res.text()); }
+    }catch(err){ console.error('Create worker error:', err); }
+  }
+};
 
 /* ---------------- Drawer open/close ---------------- */
 function openDrawer(){ $('#scrim').classList.add('open'); $('#drawer').classList.add('open'); }
@@ -385,6 +468,7 @@ $('#apFilters').querySelectorAll('button').forEach(b=>b.addEventListener('click'
 function renderAll(){ renderTiles(); renderBookings(); renderApplications(); }
 renderAll();          // draw immediately (applications demo data + empty bookings)
 loadBookings();       // then fetch real bookings from the database and re-draw
+loadApplications();   // and fetch real worker applications
 
 /* theme */
 $('#theme').addEventListener('click',()=>{
