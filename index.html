@@ -332,7 +332,8 @@ const blank = ()=>({
   media:[],               // uploaded file names
   date:'', flex:null, time:null,   // time = "HH:MM" 24h anchor slot
   name:'', phone:'', email:'', address:'', notes:'',
-  lat:null, lng:null               // captured from address autocomplete
+  lat:null, lng:null,              // captured from address autocomplete
+  _timeMode:'best'                 // 'best' recommended times, or 'all' full grid
 });
 let state = blank();
 let step = 0, done = false;
@@ -477,21 +478,32 @@ function render(){
 
   else if(s.id==='time'){
     const flexible = state.flex!=='exact';
-    const dow = dayOfDate();
     const dayName = new Date(state.date+'T00:00').toLocaleDateString(undefined,{weekday:'long'});
-    const {open,close}=HOURS[dow];
-    const hoursNote = `${dayName}: ${slotLabel(open)} – ${slotLabel(close===24*60?23*60+59:close)}`;
-    const title = flexible ? 'Pick your ideal time' : 'Pick your time';
-    const sub = flexible
-      ? 'Tap the time you’d most like. We’ll shade the hour before and after — that’s the flexibility you’re giving us to plan a smarter route.'
-      : 'Tap the slot you need. We’ll protect this time for you.';
-    html = head(title, sub)
-      + `<div class="reassure" style="margin-bottom:18px">🕒 <span>Showing times for <b>${hoursNote}</b>. Want a different day? Go back and change the date.</span></div>`
-      + timeGrid()
-      + (flexible ? `<div class="timekey">
-          <span><i class="swatch a"></i> Your ideal time</span>
-          <span><i class="swatch b"></i> You’ll allow this too</span>
-        </div>` : '');
+    // Two modes: 'best' (recommended times) or 'all' (full grid). Default to 'best'.
+    if(!state._timeMode) state._timeMode='best';
+
+    if(state._timeMode==='best'){
+      html = head('Our best times for you',
+        'These times let us get to you most efficiently. Pick one — or see all times if none work.')
+        + `<div id="bestWrap"><div class="reassure">🔎 <span>Finding the best times for ${esc(dayName)}…</span></div></div>`
+        + `<button class="btn link" id="showAll" style="margin-top:8px">None of these work for me →</button>`;
+    } else {
+      const dow = dayOfDate();
+      const {open,close}=HOURS[dow];
+      const hoursNote = `${dayName}: ${slotLabel(open)} – ${slotLabel(close===24*60?23*60+59:close)}`;
+      const title = flexible ? 'Pick your ideal time' : 'Pick your time';
+      const sub = flexible
+        ? 'Tap the time you’d most like. We’ll shade the hour before and after.'
+        : 'Tap the slot you need. We’ll protect this time for you.';
+      html = head(title, sub)
+        + `<button class="btn link" id="backToBest" style="margin-bottom:12px">← Back to recommended times</button>`
+        + `<div class="reassure" style="margin-bottom:18px">🕒 <span>Showing all times for <b>${hoursNote}</b>.</span></div>`
+        + timeGrid()
+        + (flexible ? `<div class="timekey">
+            <span><i class="swatch a"></i> Your ideal time</span>
+            <span><i class="swatch b"></i> You’ll allow this too</span>
+          </div>` : '');
+    }
   }
 
   else if(s.id==='contact'){
@@ -568,6 +580,36 @@ function slotLabel(m){
 function slotKey(m){ const h=Math.floor(m/60),min=m%60; return `${String(h).padStart(2,'0')}:${min===0?'00':'30'}`; }
 function fmtTime(key){ if(!key) return ''; const [h,mm]=key.split(':').map(Number); return slotLabel(h*60+mm); }
 function partOf(m){ if(m<12*60) return 'Morning'; if(m<17*60) return 'Afternoon'; return 'Evening'; }
+
+/* Fetch AI-recommended times from the server function and render them as buttons.
+   Keeps worker data private — only ranked slots come back. */
+async function fetchBestTimes(){
+  const wrap = document.querySelector('#bestWrap');
+  if(!wrap) return;
+  try{
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/best-times`, {
+      method:'POST',
+      headers:{ apikey:SUPABASE_KEY, Authorization:`Bearer ${SUPABASE_KEY}`, 'Content-Type':'application/json' },
+      body: JSON.stringify({ date: state.date, market: state.market, lat: state.lat, lng: state.lng })
+    });
+    const data = await res.json();
+    const recs = (data.recommended||[]);
+    if(!recs.length){ wrap.innerHTML = `<div class="reassure">No recommended times — tap “see all times” below to choose any slot.</div>`; return; }
+    wrap.innerHTML = `<div class="opts">` + recs.map(key=>{
+      const sel = state.time===key ? 'sel' : '';
+      return `<button class="opt ${sel}" data-slot="${key}">
+        <div class="oicon">★</div><div class="otxt"><b>${slotLabel(keyMin(key))}</b><small>Great for our route</small></div>
+        <span class="check">✓</span></button>`;
+    }).join('') + `</div>`;
+    // wire these recommended buttons to select the time
+    wrap.querySelectorAll('.opt[data-slot]').forEach(btn=>btn.addEventListener('click',()=>{
+      state.time = btn.dataset.slot; render();
+    }));
+  }catch(e){
+    wrap.innerHTML = `<div class="reassure">Couldn’t load recommended times — tap “see all times” below.</div>`;
+  }
+}
+function keyMin(k){ const[h,m]=k.split(':').map(Number); return h*60+m; }
 
 function timeGrid(){
   const flexible = state.flex!=='exact';
@@ -669,6 +711,17 @@ function bindStep(){
   }
 
   // time slots
+  // --- Best-times mode: fetch recommended slots + wire toggles ---
+  if(STEPS[step].id==='time' && state._timeMode==='best'){
+    const showAll = slot.querySelector('#showAll');
+    if(showAll) showAll.addEventListener('click',()=>{ state._timeMode='all'; render(); });
+    fetchBestTimes();
+  }
+  if(STEPS[step].id==='time'){
+    const backBtn = slot.querySelector('#backToBest');
+    if(backBtn) backBtn.addEventListener('click',()=>{ state._timeMode='best'; render(); });
+  }
+
   const slotBtns = slot.querySelectorAll('.slot[data-slot]');
   const flexiblePick = STEPS[step].id==='time' && state.flex!=='exact';
   const keyToMin = k=>{const[h,mm]=k.split(':').map(Number);return h*60+mm;};
@@ -693,7 +746,7 @@ function bindStep(){
     }
   });
 
-  const d=$('#d'); if(d) d.addEventListener('change',e=>{state.date=e.target.value; state.time=null; paintNav();});
+  const d=$('#d'); if(d) d.addEventListener('change',e=>{state.date=e.target.value; state.time=null; state._timeMode='best'; paintNav();});
   bindField('#n','name'); bindField('#p','phone'); bindField('#e','email'); bindField('#a','address'); bindField('#nt','notes');
   attachAddressAutocomplete();   // Google address dropdown on the address field
   slot.querySelectorAll('[data-goto]').forEach(b=>b.addEventListener('click',()=>{ jumpTo(b.dataset.goto); }));
