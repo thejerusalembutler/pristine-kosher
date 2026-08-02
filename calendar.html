@@ -127,6 +127,7 @@
     .bar{gap:8px}
   }
 </style>
+<script src="auth-gate.js"></script>
 </head>
 <body>
 
@@ -366,7 +367,8 @@ $('#theme').addEventListener('click',()=>{
   document.documentElement.setAttribute('data-theme', cur?(cur==='dark'?'light':'dark'):(sysDark?'light':'dark'));
 });
 
-load();
+// require staff login before loading any data
+PKAuth.protect(load);
 </script>
 </body>
 </html>

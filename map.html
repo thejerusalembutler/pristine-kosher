@@ -45,6 +45,7 @@
   .infowin b{font-size:14px}
   .infowin .meta{color:#555;font-size:12px}
 </style>
+<script src="auth-gate.js"></script>
 </head>
 <body>
 
@@ -154,7 +155,8 @@ async function init(){
   ['#fMarket','#fWorker','#fDay'].forEach(s=>$(s).addEventListener('change',draw));
 }
 
-window.gmapsReady=init;
+// require staff login; only then run the map init (which loads customer data)
+window.gmapsReady=()=>PKAuth.protect(init);
 </script>
 <script async
   src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDiFIE0_u7OuBN0k9PkyUgNBLWVsAlz20I&callback=gmapsReady">
