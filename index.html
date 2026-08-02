@@ -246,6 +246,33 @@
 const SUPABASE_URL = 'https://qkgdobpazyoxesyiznus.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_cjaMPpEPhe-HxUd616SSRg_ShraAso2';
 
+/* ---------------- Google address autocomplete ----------------
+   Attaches a Google dropdown to the address field. When the customer picks
+   a real address, it fills state.address AND captures exact coordinates —
+   so the booking is geocoded the moment it's created. */
+let _gmapsReady = false;
+window.gmapsReady = () => { _gmapsReady = true; attachAddressAutocomplete(); };
+function attachAddressAutocomplete(){
+  const el = document.querySelector('#a');
+  if(!el || !_gmapsReady || !window.google || el.dataset.acAttached) return;
+  el.dataset.acAttached = '1';
+  const ac = new google.maps.places.Autocomplete(el, {
+    types: ['address'],
+    componentRestrictions: { country: ['us','ca'] },   // US + Canada (your markets)
+    fields: ['formatted_address','geometry']
+  });
+  ac.addListener('place_changed', () => {
+    const p = ac.getPlace();
+    if(p.formatted_address){ state.address = p.formatted_address; el.value = p.formatted_address; }
+    if(p.geometry && p.geometry.location){
+      state.lat = p.geometry.location.lat();
+      state.lng = p.geometry.location.lng();
+    }
+    el.closest('.field')?.classList.remove('invalid');
+    if(typeof paintNav==='function') paintNav();
+  });
+}
+
 /* Saves the finished booking into the Supabase `bookings` table.
    Returns true on success, false on failure (booking still shows either way). */
 async function saveBooking(){
@@ -266,7 +293,9 @@ async function saveBooking(){
     flexibility: state.flex,
     estimate: total(),
     notes: state.notes,
-    media: state.media
+    media: state.media,
+    lat: state.lat || null,     // captured from address autocomplete
+    lng: state.lng || null
   };
   try{
     const res = await fetch(`${SUPABASE_URL}/rest/v1/bookings`, {
@@ -302,7 +331,8 @@ const blank = ()=>({
   addons:[],              // stovetop, warming, microwave, oven
   media:[],               // uploaded file names
   date:'', flex:null, time:null,   // time = "HH:MM" 24h anchor slot
-  name:'', phone:'', email:'', address:'', notes:''
+  name:'', phone:'', email:'', address:'', notes:'',
+  lat:null, lng:null               // captured from address autocomplete
 });
 let state = blank();
 let step = 0, done = false;
@@ -665,6 +695,7 @@ function bindStep(){
 
   const d=$('#d'); if(d) d.addEventListener('change',e=>{state.date=e.target.value; state.time=null; paintNav();});
   bindField('#n','name'); bindField('#p','phone'); bindField('#e','email'); bindField('#a','address'); bindField('#nt','notes');
+  attachAddressAutocomplete();   // Google address dropdown on the address field
   slot.querySelectorAll('[data-goto]').forEach(b=>b.addEventListener('click',()=>{ jumpTo(b.dataset.goto); }));
 }
 function bindField(sel,key){const el=slot.querySelector(sel); if(el) el.addEventListener('input',e=>{state[key]=e.target.value; el.closest('.field')?.classList.remove('invalid'); paintNav();});}
@@ -743,6 +774,9 @@ $('#theme').addEventListener('click',()=>{
 });
 
 render();
+</script>
+<script async
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDiFIE0_u7OuBN0k9PkyUgNBLWVsAlz20I&libraries=places&callback=gmapsReady">
 </script>
 </body>
 </html>
