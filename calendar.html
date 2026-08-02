@@ -238,7 +238,19 @@ function render(){
   else if(view==='week') renderWeek();
   else renderDay();
   const v=visible().length, total=bookings.filter(b=>b.service_date).length;
-  $('#countNote').innerHTML = `Showing <b>${v}</b> of ${total} scheduled jobs${fMarket?` in ${esc(fMarket)}`:''}.`;
+  // base line
+  let note = `Showing <b>${v}</b> of ${total} scheduled jobs${fMarket?` in ${esc(fMarket)}`:''}.`;
+  // when filtered to a specific worker, add a schedule summary
+  if(fWorker && fWorker!=='__unassigned'){
+    const w = workers.find(x=>x.id===fWorker);
+    const theirs = visible();
+    const days = [...new Set(theirs.map(j=>j.service_date))].sort();
+    const revenue = theirs.reduce((s,j)=>s+(j.estimate||0),0);
+    note = `<b>${esc(w?w.name:'Worker')}</b>’s schedule — <b>${theirs.length}</b> job${theirs.length===1?'':'s'} across <b>${days.length}</b> day${days.length===1?'':'s'} · $${revenue} total.`;
+  } else if(fWorker==='__unassigned'){
+    note = `<b>${v}</b> unassigned job${v===1?'':'s'}${fMarket?` in ${esc(fMarket)}`:''} — need a worker.`;
+  }
+  $('#countNote').innerHTML = note;
 }
 
 /* ---------------- MONTH ---------------- */

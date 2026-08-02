@@ -427,7 +427,9 @@ function assignmentSection(b){
   if(b.assignedWorkerId){
     const w = workersData.find(x=>x.id===b.assignedWorkerId);
     return `<div class="assigned-now">✓ Assigned to <b>${esc(w?w.name:'a worker')}</b>
-      <button class="mini-btn" onclick="unassign('${b.id}')">Change</button></div>`;
+      <button class="mini-btn" onclick="unassign('${b.id}')">Change</button></div>
+      <button class="btn approve mini" style="margin-top:8px;width:100%" onclick="recalcRoutes(this)">↻ Recalculate routes now</button>
+      <div class="recalc-note" style="font-size:12px;color:var(--muted);margin-top:6px">After overriding an assignment, click to re-optimize the affected workers’ routes right away (instead of waiting for the next automatic pass).</div>`;
   }
   const ranked = eligibleWorkers(b);
   if(!ranked.length){
@@ -476,6 +478,24 @@ window.unassign = async (bookingId) => {
       body: JSON.stringify({ assigned_worker_id: null })
     });
   }catch(err){ console.error('Unassign failed:', err); }
+};
+
+/* Manually trigger the route-optimization engine right now (after an override).
+   Re-optimizes every worker-day that changed — including both workers an override touched. */
+window.recalcRoutes = async (btn) => {
+  const orig = btn.textContent;
+  btn.disabled = true; btn.textContent = '↻ Recalculating…';
+  try{
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/optimize-routes`, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'apikey':SUPABASE_KEY, 'Authorization':`Bearer ${SUPABASE_KEY}` }
+    });
+    const data = await res.json();
+    btn.textContent = res.ok ? `✓ Recalculated ${data.optimized||0} route${data.optimized===1?'':'s'}` : '✕ Failed — try again';
+  }catch(err){
+    console.error('Recalc failed:', err); btn.textContent = '✕ Failed — try again';
+  }
+  setTimeout(()=>{ btn.disabled=false; btn.textContent=orig; }, 3000);
 };
 
 /* ---------------- Drawer: booking ---------------- */
