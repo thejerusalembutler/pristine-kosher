@@ -359,7 +359,7 @@ function openApplication(id){
       <div class="drow"><span class="k">Returning</span><span class="v">${a.returning==='yes'?`Yes (${esc(a.years)})`:'No'}</span></div>
     </div>
     ${resolved
-      ? `<div class="resolved ${a.status==='declined'?'no':''}">${a.status==='approved'?'✓ Approved — added to '+a.market':STATUS_LABEL[a.status]}</div>`
+      ? `<div class="resolved ${a.status==='declined'?'no':''}">${a.status==='approved'?('✓ Approved — added to '+a.market):STATUS_LABEL[a.status]}</div>`
       : `<div class="dfoot">
           <button class="btn decline" onclick="setApp('${a.id}','declined')">Decline</button>
           <button class="btn approve" onclick="setApp('${a.id}','approved')">Approve worker</button>
