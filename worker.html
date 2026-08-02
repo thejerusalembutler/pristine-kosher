@@ -47,6 +47,11 @@
   .jrow .owed{font-weight:800;color:var(--ink)}
   .jrow .owed.big{font-size:17px}
 
+  .arrival{padding:14px 18px;border-top:1px solid var(--line)}
+  .arrgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
+  .arrbtn{font-family:inherit;font-size:12.5px;font-weight:600;padding:11px 4px;border:1.5px solid var(--line);border-radius:10px;background:var(--card);color:inherit;cursor:pointer;transition:border-color .12s,background .12s}
+  .arrbtn:hover{border-color:var(--teal)}
+  .arrbtn.sel{background:var(--teal-soft);border-color:var(--teal);color:var(--teal-dark)}
   .jaction{padding:16px 18px;border-top:1px solid var(--line);background:var(--mist)}
   .paylabel{font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:9px}
   .paygrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
@@ -95,6 +100,17 @@ const esc=x=>(x||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&q
 let workers=[], jobs=[];
 
 const PAY={zelle:'Zelle',cash:'Cash',check:'Check',cc_office:'Credit card (call office)',unpaid:'Unpaid'};
+const ARR={omw:'On my way',ontime:'On time',late15:'15 min late'};
+// the actual message texted to the customer
+function arrivalMessage(key,customer){
+  const first=(customer||'').split(' ')[0]||'there';
+  const msgs={
+    omw:`Hi ${first}, this is your Pristine Kosher technician — I’m on my way to you now.`,
+    ontime:`Hi ${first}, this is Pristine Kosher — confirming I’ll be there on time for your appointment.`,
+    late15:`Hi ${first}, this is Pristine Kosher — I’m running about 15 minutes late, thank you for your patience.`
+  };
+  return msgs[key]||'';
+}
 function fmt12(t){ if(!t) return ''; let [h,m]=t.split(':').map(Number); const ap=h>=12?'PM':'AM'; let hh=h%12||12; return `${hh}:${String(m).padStart(2,'0')} ${ap}`; }
 function serviceLabel(b){
   if(b.base==='sinks') return `Sinks only · ${b.sink_count||'?'} sink${b.sink_count>1?'s':''}`;
@@ -146,6 +162,14 @@ function render(){
         <div class="jrow"><span class="ic">💵</span><span class="owed big">$${j.estimate||0} <span style="font-weight:400;color:var(--muted);font-size:13px">to collect</span></span></div>
         ${j.notes?`<div class="jrow"><span class="ic">📝</span><span>${esc(j.notes)}</span></div>`:''}
       </div>
+      <div class="arrival">
+        <div class="paylabel">Tell the customer${j.arrival_status?` · last: ${esc(ARR[j.arrival_status]||'')}`:''}</div>
+        <div class="arrgrid">
+          <button class="arrbtn" data-arr="omw" data-id="${j.id}">🚗 On my way</button>
+          <button class="arrbtn" data-arr="ontime" data-id="${j.id}">👍 On time</button>
+          <button class="arrbtn" data-arr="late15" data-id="${j.id}">⏱ 15 min late</button>
+        </div>
+      </div>
       <div class="jaction">
         <div class="paylabel">How did they pay?</div>
         <div class="paygrid">
@@ -170,6 +194,24 @@ function render(){
   }));
   document.querySelectorAll('.donebtn').forEach(b=>b.addEventListener('click',()=>markDone(b.dataset.done,b.closest('.job')._pay)));
   document.querySelectorAll('[data-undo]').forEach(b=>b.addEventListener('click',()=>undo(b.dataset.undo)));
+
+  // arrival-status: record it + open the phone's SMS app pre-filled to the customer
+  document.querySelectorAll('.arrbtn').forEach(b=>b.addEventListener('click',()=>{
+    const id=b.dataset.id, key=b.dataset.arr;
+    const job=jobs.find(j=>j.id===id);
+    const card=b.closest('.job');
+    card.querySelectorAll('.arrbtn').forEach(x=>x.classList.remove('sel'));
+    b.classList.add('sel');
+    // save the status
+    fetch(`${SUPABASE_URL}/rest/v1/bookings?id=eq.${id}`,{method:'PATCH',
+      headers:{...H,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify({arrival_status:key,arrival_status_at:new Date().toISOString()})});
+    // open native SMS app pre-filled (works today, before Twilio automation)
+    const digits=(job.phone||'').replace(/[^0-9]/g,'');
+    const msg=encodeURIComponent(arrivalMessage(key,job.customer_name));
+    if(digits){ window.location.href=`sms:${digits}?&body=${msg}`; }
+    else { alert('No phone number on this booking — can’t text.'); }
+  }));
 }
 
 async function markDone(id,pay){
