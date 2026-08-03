@@ -114,7 +114,13 @@
   </div>
   <div class="field"><label>Notes</label><textarea id="notes" rows="2" placeholder="Anything special…"></textarea></div>
 
-  <div class="est"><span>Estimated total</span><span class="v" id="estVal">$265</span></div>
+  <div class="sec">Discount (optional)</div>
+  <div class="row2">
+    <div class="field"><label>Amount</label><input id="discVal" type="number" min="0" placeholder="0"></div>
+    <div class="field"><label>Type</label><select id="discType"><option value="amount">$ off</option><option value="percent">% off</option></select></div>
+  </div>
+
+  <div class="est"><span>Total after discount</span><span class="v" id="estVal">$265</span></div>
 
   <div class="sec">Payment (optional)</div>
   <div class="row2">
@@ -134,13 +140,21 @@ const H=()=>({apikey:SUPABASE_KEY,Authorization:`Bearer ${localStorage.getItem("
 const PRICE={counters:{small:230,standard:265,large:300},sinks:{1:100,2:155,3:185},island:{small:30,large:50},addon:{stovetop:50,warming:40,microwave:25,oven:10}};
 const st={base:'counters',size:'standard',sinkCount:null,island:'',addons:[]};
 
-function total(){
+// base estimate before discount
+function baseEstimate(){
   let t=0;
   if(st.base==='counters'&&st.size) t+=PRICE.counters[st.size];
   if(st.base==='sinks'&&st.sinkCount) t+=PRICE.sinks[st.sinkCount];
   if(st.island) t+=PRICE.island[st.island];
   st.addons.forEach(a=>t+=PRICE.addon[a]);
   return t;
+}
+// total after applying the discount
+function total(){
+  let t=baseEstimate();
+  const dv=+$('#discVal').value||0, dt=$('#discType').value;
+  if(dv>0){ t = dt==='percent' ? t*(1-dv/100) : t-dv; }
+  return Math.max(0,Math.round(t));
 }
 function paintEst(){ $('#estVal').textContent='$'+total(); }
 
@@ -156,6 +170,8 @@ $('#size').addEventListener('click',e=>{ const b=e.target.closest('[data-size]')
 $('#sinks').addEventListener('click',e=>{ const b=e.target.closest('[data-sink]'); if(!b)return; st.sinkCount=+b.dataset.sink; $('#sinks').querySelectorAll('.chip').forEach(c=>c.classList.toggle('sel',c===b)); paintEst(); });
 $('#island').addEventListener('click',e=>{ const b=e.target.closest('[data-island]'); if(!b)return; st.island=b.dataset.island; $('#island').querySelectorAll('.chip').forEach(c=>c.classList.toggle('sel',c===b)); paintEst(); });
 $('#addons').addEventListener('click',e=>{ const b=e.target.closest('[data-add]'); if(!b)return; const a=b.dataset.add; const i=st.addons.indexOf(a); i>-1?st.addons.splice(i,1):st.addons.push(a); b.classList.toggle('sel'); paintEst(); });
+$('#discVal').addEventListener('input',paintEst);
+$('#discType').addEventListener('change',paintEst);
 
 async function loadMarkets(){
   const r=await fetch(`${SUPABASE_URL}/rest/v1/markets?select=name&order=name.asc`,{headers:H()});
@@ -174,7 +190,9 @@ $('#submit').addEventListener('click',async()=>{
     status:'confirmed', customer_name:name, phone, email:$('#email').value.trim(), address:$('#address').value.trim(),
     market, base:st.base, size:st.base==='counters'?st.size:null, sink_count:st.base==='sinks'?st.sinkCount:null,
     island:st.island||null, addons:st.addons, service_date:$('#date').value||null, time_slot:$('#time').value,
-    flexibility:'limited', estimate:total(), notes:$('#notes').value.trim(),
+    flexibility:'limited', estimate:baseEstimate(),
+    discount_type:(+$('#discVal').value>0?$('#discType').value:null), discount_value:(+$('#discVal').value||0),
+    notes:$('#notes').value.trim(),
     offline_paid:paidAmt, offline_method:paidMethod||null
   };
   try{
