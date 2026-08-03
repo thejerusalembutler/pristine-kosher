@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pristine Kosher — Text Inbox</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="auth-gate.js"></script>
+<style>
+  :root{--teal:#20A59F;--teal-dark:#178079;--teal-soft:#E3F4F2;--ink:#0A0A0A;--paper:#FFFFFF;--mist:#F4F6F5;--line:#E7EBEA;--muted:#5C6663;--green:#2FA84F}
+  @media (prefers-color-scheme: dark){:root{--teal:#2FBDB6;--teal-dark:#20A59F;--teal-soft:#123330;--ink:#F2F5F4;--paper:#0E1413;--mist:#0A0F0E;--line:#243230;--muted:#9AA7A4;--green:#4FC26B}}
+  :root[data-theme="light"]{--teal:#20A59F;--ink:#0A0A0A;--paper:#FFFFFF;--mist:#F4F6F5;--line:#E7EBEA;--muted:#5C6663;--teal-soft:#E3F4F2}
+  :root[data-theme="dark"]{--teal:#2FBDB6;--ink:#F2F5F4;--paper:#0E1413;--mist:#0A0F0E;--line:#243230;--muted:#9AA7A4;--teal-soft:#123330}
+  *{box-sizing:border-box}html,body{margin:0;height:100%}
+  body{background:var(--mist);color:var(--ink);font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100vh}
+  .top{display:flex;align-items:center;gap:14px;padding:14px 24px;background:var(--ink);color:#fff;flex:none}
+  .top .mark{width:30px;height:30px}.top .name{font-weight:800;letter-spacing:.12em;font-size:13px}.top .name span{color:var(--teal)}
+  .top .crumb{margin-left:6px;padding-left:14px;border-left:1px solid #2a3432;font-size:13px;color:#9aa7a4}
+  .top .links{margin-left:auto;display:flex;gap:14px;font-size:13px}.top .links a{color:#9aa7a4;text-decoration:none}.top .links a:hover{color:#fff}
+
+  .body{flex:1;display:grid;grid-template-columns:300px 1fr;min-height:0}
+  .list{border-right:1px solid var(--line);background:var(--paper);overflow-y:auto}
+  .newbar{padding:12px;border-bottom:1px solid var(--line);display:flex;gap:8px}
+  .newbar input{flex:1;padding:9px 12px;border:1.5px solid var(--line);border-radius:9px;font-family:inherit;font-size:14px;background:var(--mist);color:inherit}
+  .newbar button{padding:9px 14px;background:var(--teal);color:#fff;border:none;border-radius:9px;font-weight:600;font-size:13px;cursor:pointer;font-family:inherit}
+  .conv{padding:14px 18px;border-bottom:1px solid var(--line);cursor:pointer}
+  .conv:hover,.conv.active{background:var(--mist)}
+  .conv .n{font-weight:600;font-size:14.5px}
+  .conv .last{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+  .conv .unread{width:8px;height:8px;border-radius:50%;background:var(--teal);display:inline-block;margin-left:6px}
+
+  .thread{display:flex;flex-direction:column;min-height:0}
+  .thead{padding:16px 22px;border-bottom:1px solid var(--line);background:var(--paper);font-weight:700}
+  .thead small{display:block;font-weight:400;color:var(--muted);font-size:13px;margin-top:2px}
+  .msgs{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:10px;background:var(--mist)}
+  .bubble{max-width:70%;padding:11px 15px;border-radius:16px;font-size:14.5px;line-height:1.45;white-space:pre-wrap;word-break:break-word}
+  .bubble.out{align-self:flex-end;background:var(--teal);color:#fff;border-bottom-right-radius:5px}
+  .bubble.in{align-self:flex-start;background:var(--paper);border:1px solid var(--line);border-bottom-left-radius:5px}
+  .bubble .time{font-size:10.5px;opacity:.7;margin-top:4px}
+  .composer{padding:14px 18px;border-top:1px solid var(--line);background:var(--paper);display:flex;gap:10px}
+  .composer textarea{flex:1;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;font-family:inherit;font-size:15px;resize:none;background:var(--mist);color:inherit;max-height:120px}
+  .composer button{padding:0 22px;background:var(--teal);color:#fff;border:none;border-radius:12px;font-weight:700;cursor:pointer;font-family:inherit}
+  .composer button:disabled{opacity:.5}
+  .empty{display:grid;place-items:center;height:100%;color:var(--muted);text-align:center;padding:40px}
+  .banner{background:color-mix(in srgb,var(--teal) 12%,transparent);color:var(--teal-dark);font-size:12.5px;padding:8px 18px;text-align:center}
+  @media(max-width:720px){ .body{grid-template-columns:1fr} .thread{display:none} .thread.show{display:flex;position:fixed;inset:0;top:59px;background:var(--paper);z-index:5} }
+</style>
+</head>
+<body>
+<div class="top">
+  <svg class="mark" viewBox="0 0 100 100"><rect x="8" y="14" width="40" height="72" fill="#fff"/><path d="M20 30 h14 a13 13 0 0 1 0 26 h-14 z" fill="#0A0A0A"/><rect x="20" y="30" width="6" height="26" fill="#0A0A0A"/><path d="M50 14 h22 L46 50 L72 86 H50 L28 52 z" fill="#20A59F"/></svg>
+  <div class="name">PRISTINE <span>KOSHER</span></div>
+  <div class="crumb">Text inbox</div>
+  <div class="links"><a href="dashboard.html">Dashboard</a><a href="customers.html">Customers</a></div>
+</div>
+<div class="banner" id="banner">Texting is set up — messages send &amp; receive once your Twilio number is connected &amp; approved.</div>
+<div class="body">
+  <div class="list">
+    <div class="newbar">
+      <input id="newPhone" placeholder="New: phone number…" inputmode="tel">
+      <button id="newBtn">Start</button>
+    </div>
+    <div id="convs"><div class="empty" style="height:auto;padding:30px">No conversations yet.</div></div>
+  </div>
+  <div class="thread" id="thread"><div class="empty">Pick a conversation, or start a new text.</div></div>
+</div>
+
+<script>
+const SUPABASE_URL='https://qkgdobpazyoxesyiznus.supabase.co';
+const SUPABASE_KEY='sb_publishable_cjaMPpEPhe-HxUd616SSRg_ShraAso2';
+const $=s=>document.querySelector(s);
+const esc=x=>(x||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+const H=()=>({apikey:SUPABASE_KEY,Authorization:`Bearer ${localStorage.getItem("pk_staff_token")||SUPABASE_KEY}`,'Content-Type':'application/json'});
+const norm=p=>{const d=(p||'').replace(/[^0-9]/g,'');return d.length===10?'+1'+d:(d.length===11&&d[0]==='1'?'+'+d:'+'+d);};
+const fmtT=iso=>{try{return new Date(iso).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});}catch{return'';}};
+let active=null, myEmail=null;
+
+async function loadConvs(){
+  const r=await fetch(`${SUPABASE_URL}/rest/v1/messages?select=phone,customer_name,body,direction,created_at&order=created_at.desc&limit=500`,{headers:H()});
+  const rows=r.ok?await r.json():[];
+  const byPhone={};
+  rows.forEach(m=>{ if(!byPhone[m.phone]) byPhone[m.phone]={phone:m.phone,name:m.customer_name,last:m.body,dir:m.direction,at:m.created_at}; });
+  const list=Object.values(byPhone);
+  $('#convs').innerHTML = list.length ? list.map(c=>`
+    <div class="conv ${active===c.phone?'active':''}" data-phone="${esc(c.phone)}" data-name="${esc(c.name||'')}">
+      <div class="n">${esc(c.name||c.phone)}</div>
+      <div class="last">${c.dir==='out'?'You: ':''}${esc((c.last||'').slice(0,44))}</div>
+    </div>`).join('') : '<div class="empty" style="height:auto;padding:30px">No conversations yet.</div>';
+  document.querySelectorAll('.conv').forEach(el=>el.addEventListener('click',()=>openThread(el.dataset.phone,el.dataset.name)));
+}
+
+async function openThread(phone,name){
+  active=phone;
+  document.querySelectorAll('.conv').forEach(c=>c.classList.toggle('active',c.dataset.phone===phone));
+  const th=$('#thread'); th.classList.add('show');
+  const r=await fetch(`${SUPABASE_URL}/rest/v1/messages?select=*&phone=eq.${encodeURIComponent(phone)}&order=created_at.asc`,{headers:H()});
+  const msgs=r.ok?await r.json():[];
+  th.innerHTML=`
+    <div class="thead">${esc(name||phone)}<small>${esc(phone)}</small></div>
+    <div class="msgs" id="msgs">${msgs.map(m=>`<div class="bubble ${m.direction}">${esc(m.body)}<div class="time">${fmtT(m.created_at)}</div></div>`).join('')||'<div class="empty">No messages yet — say hi.</div>'}</div>
+    <div class="composer"><textarea id="composeBox" rows="1" placeholder="Type a message…"></textarea><button id="sendBtn">Send</button></div>`;
+  const box=$('#msgs'); if(box) box.scrollTop=box.scrollHeight;
+  $('#sendBtn').addEventListener('click',()=>sendText(phone,name));
+  $('#composeBox').addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendText(phone,name); }});
+}
+
+async function sendText(phone,name){
+  const box=$('#composeBox'), text=box.value.trim(); if(!text) return;
+  $('#sendBtn').disabled=true;
+  const res=await fetch(`${SUPABASE_URL}/functions/v1/send-sms`,{method:'POST',headers:H(),
+    body:JSON.stringify({action:'send',phone,message:text,name:name||null,staff:myEmail})});
+  const data=await res.json();
+  $('#sendBtn').disabled=false;
+  if(data.ok){ box.value=''; openThread(phone,name); loadConvs(); }
+  else { alert('Could not send: '+(JSON.stringify(data.error||'').slice(0,120))+'\n(Twilio must be connected & approved first.)'); }
+}
+
+$('#newBtn').addEventListener('click',()=>{ const p=norm($('#newPhone').value.trim()); if(p.length>5){ openThread(p,''); } });
+
+PKAuth.protect(async ()=>{
+  // who am I (for staff_email)
+  try{ const u=await fetch(`${SUPABASE_URL}/auth/v1/user`,{headers:{apikey:SUPABASE_KEY,Authorization:`Bearer ${localStorage.getItem("pk_staff_token")}`}}); if(u.ok){ myEmail=(await u.json()).email; } }catch(_){}
+  loadConvs();
+  setInterval(loadConvs, 15000); // refresh conversation list for new replies
+});
+</script>
+</body>
+</html>
