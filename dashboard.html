@@ -217,6 +217,15 @@
     </div>
     <div class="rows" id="workerRollup"><div class="empty">Loading worker totals…</div></div>
   </div>
+
+  <!-- Where customers come from -->
+  <div class="panel" style="margin-top:20px">
+    <div class="phead">
+      <h2>Where customers come from</h2>
+      <div style="margin-left:auto;font-size:12px;color:var(--muted)">Marketing sources</div>
+    </div>
+    <div style="padding:16px 18px" id="referralChart"><div class="empty">Loading…</div></div>
+  </div>
 </div>
 
 <!-- Drawer -->
@@ -833,7 +842,32 @@ function renderRollup(){
         <div class="rright"><span class="ramt" style="color:var(--orange)">$${totalCash}</span></div></div>`;
 }
 
-function renderAll(){ renderTiles(); renderBookings(); renderApplications(); renderRollup(); }
+/* ---------------- Referral sources breakdown ---------------- */
+const REF_LABELS={friend:'Friend / word of mouth',returning:'Used us before',google:'Google search',instagram:'Instagram / social',whatsapp:'WhatsApp',flyer:'Flyer / ad',shul:'Shul / community',other:'Other'};
+const REF_COLORS={friend:'#20A59F',returning:'#2FA84F',google:'#3B7DD8',instagram:'#E0559C',whatsapp:'#25D366',flyer:'#F78700',shul:'#8659C4',other:'#5C6663'};
+function renderReferrals(){
+  const el=document.getElementById('referralChart'); if(!el) return;
+  const counts={};
+  bookings.forEach(b=>{ const src=(b._raw&&b._raw.referral_source); if(src){ counts[src]=(counts[src]||0)+1; } });
+  const entries=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  const total=entries.reduce((s,[,n])=>s+n,0);
+  if(!total){ el.innerHTML='<div class="empty">No referral data yet — it appears as new bookings come in with “how did you hear about us”.</div>'; return; }
+  el.innerHTML=entries.map(([src,n])=>{
+    const pct=Math.round(n/total*100);
+    const color=REF_COLORS[src]||'#5C6663';
+    return `<div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;font-size:13.5px;margin-bottom:4px">
+        <span>${esc(REF_LABELS[src]||src)}</span>
+        <span style="color:var(--muted)"><b style="color:var(--ink)">${pct}%</b> · ${n}</span>
+      </div>
+      <div style="height:10px;background:var(--mist);border-radius:99px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${color};border-radius:99px"></div>
+      </div>
+    </div>`;
+  }).join('') + `<div style="font-size:12px;color:var(--muted);margin-top:10px">Based on ${total} booking${total>1?'s':''} with a source.</div>`;
+}
+
+function renderAll(){ renderTiles(); renderBookings(); renderApplications(); renderRollup(); renderReferrals(); }
 
 // Dashboard data only loads AFTER a staff member is signed in (see auth gate below).
 function startDashboard(){
