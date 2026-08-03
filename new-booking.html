@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pristine Kosher — New Booking (Staff)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="auth-gate.js"></script>
+<style>
+  :root{
+    --teal:#20A59F; --teal-dark:#178079; --teal-soft:#E3F4F2;
+    --ink:#0A0A0A; --paper:#FFFFFF; --mist:#F4F6F5;
+    --line:#E4E8E7; --muted:#5C6663; --orange:#F78700; --green:#2FA84F;
+    --card:#FFFFFF; --radius:12px; --shadow:0 1px 2px rgba(10,10,10,.04),0 8px 24px rgba(10,10,10,.06);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{--teal:#2FBDB6;--teal-dark:#20A59F;--teal-soft:#123330;--ink:#F2F5F4;--paper:#0E1413;--mist:#0A0F0E;--line:#243230;--muted:#9AA7A4;--green:#4FC26B;--card:#141C1A}
+  }
+  :root[data-theme="light"]{--teal:#20A59F;--ink:#0A0A0A;--paper:#FFFFFF;--mist:#F4F6F5;--line:#E4E8E7;--muted:#5C6663;--card:#FFFFFF;--teal-soft:#E3F4F2;--green:#2FA84F}
+  :root[data-theme="dark"]{--teal:#2FBDB6;--ink:#F2F5F4;--paper:#0E1413;--mist:#0A0F0E;--line:#243230;--muted:#9AA7A4;--card:#141C1A;--teal-soft:#123330;--green:#4FC26B}
+  *{box-sizing:border-box} html,body{margin:0}
+  body{background:var(--mist);color:var(--ink);font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.5}
+  .top{display:flex;align-items:center;gap:14px;padding:16px 28px;background:var(--ink);color:#fff}
+  .top .mark{width:32px;height:32px}
+  .top .name{font-weight:800;letter-spacing:.12em;font-size:13px}.top .name span{color:var(--teal)}
+  .top .crumb{margin-left:6px;padding-left:16px;border-left:1px solid #2a3432;font-size:13px;color:#9aa7a4}
+  .top .links{margin-left:auto;display:flex;gap:14px;font-size:13px}
+  .top .links a{color:#9aa7a4;text-decoration:none}.top .links a:hover{color:#fff}
+
+  .page{max-width:640px;margin:0 auto;padding:24px 20px 60px}
+  h1{font-size:24px;font-weight:800;margin:0 0 4px}
+  .lead{color:var(--muted);font-size:14px;margin:0 0 22px}
+  .sec{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--teal);margin:22px 0 10px}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+  .field input,.field select,.field textarea{width:100%;padding:12px 13px;border:1.5px solid var(--line);border-radius:10px;font-family:inherit;font-size:15px;background:var(--card);color:inherit}
+  .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--teal)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{padding:9px 14px;border:1.5px solid var(--line);border-radius:10px;background:var(--card);cursor:pointer;font-size:14px;font-family:inherit;color:inherit}
+  .chip.sel{background:var(--teal);border-color:var(--teal);color:#fff;font-weight:600}
+  .est{background:var(--ink);color:#fff;border-radius:12px;padding:16px;display:flex;justify-content:space-between;align-items:center;margin:18px 0}
+  .est .v{font-size:24px;font-weight:800}
+  .btn{width:100%;padding:15px;background:var(--green);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;margin-top:8px}
+  .btn:disabled{opacity:.5}
+  .msg{text-align:center;font-size:14px;margin-top:14px;min-height:20px}
+  .msg.err{color:var(--orange)}.msg.ok{color:var(--green)}
+  .success{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:36px 24px;text-align:center;box-shadow:var(--shadow)}
+  .success .big{width:70px;height:70px;border-radius:50%;background:var(--green);display:grid;place-items:center;margin:0 auto 14px}
+</style>
+</head>
+<body>
+<div class="top">
+  <svg class="mark" viewBox="0 0 100 100"><rect x="8" y="14" width="40" height="72" fill="#fff"/><path d="M20 30 h14 a13 13 0 0 1 0 26 h-14 z" fill="#0A0A0A"/><rect x="20" y="30" width="6" height="26" fill="#0A0A0A"/><path d="M50 14 h22 L46 50 L72 86 H50 L28 52 z" fill="#20A59F"/></svg>
+  <div class="name">PRISTINE <span>KOSHER</span></div>
+  <div class="crumb">New booking (staff)</div>
+  <div class="links"><a href="dashboard.html">Dashboard</a><a href="customers.html">Customers</a></div>
+</div>
+
+<div class="page" id="page">
+  <h1>New booking</h1>
+  <p class="lead">Book a customer over the phone — no card or deposit required. Record a Zelle/offline payment if they paid.</p>
+
+  <div class="sec">Customer</div>
+  <div class="field"><label>Name *</label><input id="name" placeholder="Sarah Cohen"></div>
+  <div class="row2">
+    <div class="field"><label>Phone *</label><input id="phone" placeholder="(732) 555-0100"></div>
+    <div class="field"><label>Email (for receipt)</label><input id="email" type="email"></div>
+  </div>
+  <div class="field"><label>Address</label><input id="address" placeholder="Street, city"></div>
+  <div class="field"><label>Market *</label><select id="market"><option value="">Choose…</option></select></div>
+
+  <div class="sec">Service</div>
+  <div class="field"><label>Base</label>
+    <div class="chips" id="base">
+      <button class="chip sel" data-base="counters">Counters + sinks</button>
+      <button class="chip" data-base="sinks">Sinks only</button>
+    </div>
+  </div>
+  <div class="field" id="sizeField"><label>Kitchen size</label>
+    <div class="chips" id="size">
+      <button class="chip" data-size="small">Small ($230)</button>
+      <button class="chip sel" data-size="standard">Standard ($265)</button>
+      <button class="chip" data-size="large">Large ($300)</button>
+    </div>
+  </div>
+  <div class="field" id="sinkField" style="display:none"><label>How many sinks</label>
+    <div class="chips" id="sinks">
+      <button class="chip" data-sink="1">1 ($100)</button>
+      <button class="chip" data-sink="2">2 ($155)</button>
+      <button class="chip" data-sink="3">3 ($185)</button>
+    </div>
+  </div>
+  <div class="field"><label>Add-ons</label>
+    <div class="chips" id="addons">
+      <button class="chip" data-add="stovetop">Stovetop +$50</button>
+      <button class="chip" data-add="warming">Warming +$40</button>
+      <button class="chip" data-add="microwave">Microwave +$25</button>
+      <button class="chip" data-add="oven">Oven +$10</button>
+    </div>
+  </div>
+  <div class="field" id="islandField"><label>Island</label>
+    <div class="chips" id="island">
+      <button class="chip sel" data-island="">None</button>
+      <button class="chip" data-island="small">Small +$30</button>
+      <button class="chip" data-island="large">Large +$50</button>
+    </div>
+  </div>
+
+  <div class="sec">When</div>
+  <div class="row2">
+    <div class="field"><label>Date</label><input id="date" type="date"></div>
+    <div class="field"><label>Time</label><input id="time" type="time" value="10:00"></div>
+  </div>
+  <div class="field"><label>Notes</label><textarea id="notes" rows="2" placeholder="Anything special…"></textarea></div>
+
+  <div class="est"><span>Estimated total</span><span class="v" id="estVal">$265</span></div>
+
+  <div class="sec">Payment (optional)</div>
+  <div class="row2">
+    <div class="field"><label>Amount paid now</label><input id="paidAmt" type="number" min="0" placeholder="0"></div>
+    <div class="field"><label>Method</label><select id="paidMethod"><option value="">Not paid yet</option><option value="zelle">Zelle</option><option value="cash">Cash</option><option value="check">Check</option></select></div>
+  </div>
+
+  <button class="btn" id="submit">Create booking</button>
+  <div class="msg" id="msg"></div>
+</div>
+
+<script>
+const SUPABASE_URL='https://qkgdobpazyoxesyiznus.supabase.co';
+const SUPABASE_KEY='sb_publishable_cjaMPpEPhe-HxUd616SSRg_ShraAso2';
+const $=s=>document.querySelector(s);
+const H=()=>({apikey:SUPABASE_KEY,Authorization:`Bearer ${localStorage.getItem("pk_staff_token")||SUPABASE_KEY}`,'Content-Type':'application/json'});
+const PRICE={counters:{small:230,standard:265,large:300},sinks:{1:100,2:155,3:185},island:{small:30,large:50},addon:{stovetop:50,warming:40,microwave:25,oven:10}};
+const st={base:'counters',size:'standard',sinkCount:null,island:'',addons:[]};
+
+function total(){
+  let t=0;
+  if(st.base==='counters'&&st.size) t+=PRICE.counters[st.size];
+  if(st.base==='sinks'&&st.sinkCount) t+=PRICE.sinks[st.sinkCount];
+  if(st.island) t+=PRICE.island[st.island];
+  st.addons.forEach(a=>t+=PRICE.addon[a]);
+  return t;
+}
+function paintEst(){ $('#estVal').textContent='$'+total(); }
+
+// chip handlers
+$('#base').addEventListener('click',e=>{ const b=e.target.closest('[data-base]'); if(!b)return;
+  st.base=b.dataset.base; $('#base').querySelectorAll('.chip').forEach(c=>c.classList.toggle('sel',c===b));
+  $('#sizeField').style.display=st.base==='counters'?'':'none';
+  $('#sinkField').style.display=st.base==='sinks'?'':'none';
+  $('#islandField').style.display=st.base==='counters'?'':'none';
+  paintEst();
+});
+$('#size').addEventListener('click',e=>{ const b=e.target.closest('[data-size]'); if(!b)return; st.size=b.dataset.size; $('#size').querySelectorAll('.chip').forEach(c=>c.classList.toggle('sel',c===b)); paintEst(); });
+$('#sinks').addEventListener('click',e=>{ const b=e.target.closest('[data-sink]'); if(!b)return; st.sinkCount=+b.dataset.sink; $('#sinks').querySelectorAll('.chip').forEach(c=>c.classList.toggle('sel',c===b)); paintEst(); });
+$('#island').addEventListener('click',e=>{ const b=e.target.closest('[data-island]'); if(!b)return; st.island=b.dataset.island; $('#island').querySelectorAll('.chip').forEach(c=>c.classList.toggle('sel',c===b)); paintEst(); });
+$('#addons').addEventListener('click',e=>{ const b=e.target.closest('[data-add]'); if(!b)return; const a=b.dataset.add; const i=st.addons.indexOf(a); i>-1?st.addons.splice(i,1):st.addons.push(a); b.classList.toggle('sel'); paintEst(); });
+
+async function loadMarkets(){
+  const r=await fetch(`${SUPABASE_URL}/rest/v1/markets?select=name&order=name.asc`,{headers:H()});
+  const m=r.ok?await r.json():[];
+  $('#market').innerHTML='<option value="">Choose…</option>'+m.map(x=>`<option>${x.name}</option>`).join('');
+}
+
+$('#submit').addEventListener('click',async()=>{
+  const msg=$('#msg'); msg.className='msg'; msg.textContent='';
+  const name=$('#name').value.trim(), phone=$('#phone').value.trim(), market=$('#market').value;
+  if(!name||!phone||!market){ msg.className='msg err'; msg.textContent='Name, phone, and market are required.'; return; }
+  $('#submit').disabled=true; $('#submit').textContent='Creating…';
+  const paidAmt=+$('#paidAmt').value||0, paidMethod=$('#paidMethod').value;
+  const rec={
+    id:(crypto.randomUUID?crypto.randomUUID():'x'+Date.now()),
+    status:'confirmed', customer_name:name, phone, email:$('#email').value.trim(), address:$('#address').value.trim(),
+    market, base:st.base, size:st.base==='counters'?st.size:null, sink_count:st.base==='sinks'?st.sinkCount:null,
+    island:st.island||null, addons:st.addons, service_date:$('#date').value||null, time_slot:$('#time').value,
+    flexibility:'limited', estimate:total(), notes:$('#notes').value.trim(),
+    offline_paid:paidAmt, offline_method:paidMethod||null
+  };
+  try{
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/bookings`,{method:'POST',headers:{...H(),'Prefer':'return=minimal'},body:JSON.stringify(rec)});
+    if(!res.ok){ msg.className='msg err'; msg.textContent='Could not create booking ('+res.status+').'; $('#submit').disabled=false; $('#submit').textContent='Create booking'; return; }
+    $('#page').innerHTML=`<div class="success"><div class="big"><svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <h1>Booking created</h1><p class="lead">${name} · $${total()} estimate${paidAmt?` · $${paidAmt} ${paidMethod} recorded`:''}.</p>
+      <button class="btn" onclick="location.reload()">Book another</button>
+      <a href="dashboard.html" style="display:inline-block;margin-top:12px;color:var(--teal);text-decoration:none">→ Go to dashboard</a></div>`;
+  }catch(e){ msg.className='msg err'; msg.textContent='Something went wrong.'; $('#submit').disabled=false; $('#submit').textContent='Create booking'; }
+});
+
+PKAuth.protect(()=>{ loadMarkets(); paintEst(); });
+</script>
+</body>
+</html>
