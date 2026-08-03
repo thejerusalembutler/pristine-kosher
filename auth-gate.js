@@ -39,12 +39,7 @@
     gate.style.cssText = 'position:fixed;inset:0;z-index:9999;background:#0A0A0A;display:flex;align-items:center;justify-content:center;padding:20px;font-family:Poppins,-apple-system,sans-serif';
     gate.innerHTML = `
       <div style="background:#fff;border-radius:16px;padding:32px;max-width:360px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.4)">
-        <svg width="44" height="44" viewBox="0 0 100 100" style="display:block;margin:0 auto 16px">
-          <rect x="8" y="14" width="40" height="72" fill="#0A0A0A"/>
-          <path d="M20 30 h14 a13 13 0 0 1 0 26 h-14 z" fill="#fff"/>
-          <rect x="20" y="30" width="6" height="26" fill="#fff"/>
-          <path d="M50 14 h22 L46 50 L72 86 H50 L28 52 z" fill="#20A59F"/>
-        </svg>
+        <img src="logo/pk-logo.jpg" alt="Pristine Kosher" style="display:block;margin:0 auto 18px;width:150px;height:auto">
         <h2 style="text-align:center;margin:0 0 4px;font-size:19px;color:#0A0A0A">Staff sign-in</h2>
         <p style="text-align:center;color:#5C6663;font-size:13px;margin:0 0 20px">Pristine Kosher operations</p>
         <input id="pkEmail" type="email" placeholder="Email" autocomplete="username" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid #E4E8E7;border-radius:10px;font-size:15px;margin-bottom:10px;color:#0A0A0A">

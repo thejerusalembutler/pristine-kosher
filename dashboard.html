@@ -31,7 +31,7 @@
   body{background:var(--mist);color:var(--ink);font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased;line-height:1.5}
 
   .top{display:flex;align-items:center;gap:14px;padding:16px 28px;background:var(--ink);color:#fff;position:sticky;top:0;z-index:10}
-  .top .mark{width:32px;height:32px;flex:none}
+  .top .mark{width:40px;height:auto;flex:none}
   .top .name{font-weight:800;letter-spacing:.12em;font-size:13px}
   .top .name span{color:var(--teal);font-weight:600}
   .top .crumb{margin-left:6px;padding-left:16px;border-left:1px solid #2a3432;font-size:13px;color:#9aa7a4}
@@ -144,12 +144,7 @@
 <!-- Login gate: covers the page until a staff member is signed in -->
 <div id="loginGate" style="position:fixed;inset:0;z-index:100;background:var(--ink);display:flex;align-items:center;justify-content:center;padding:20px">
   <div style="background:var(--card);border:1px solid var(--line);border-radius:16px;padding:32px;max-width:360px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.4)">
-    <svg width="44" height="44" viewBox="0 0 100 100" style="display:block;margin:0 auto 16px" aria-hidden="true">
-      <rect x="8" y="14" width="40" height="72" fill="var(--ink)"/>
-      <path d="M20 30 h14 a13 13 0 0 1 0 26 h-14 z" fill="var(--card)"/>
-      <rect x="20" y="30" width="6" height="26" fill="var(--card)"/>
-      <path d="M50 14 h22 L46 50 L72 86 H50 L28 52 z" fill="#20A59F"/>
-    </svg>
+    <img src="logo/pk-logo.jpg" alt="Pristine Kosher" style="display:block;margin:0 auto 16px;width:140px;height:auto">
     <h2 style="text-align:center;margin:0 0 4px;font-size:19px">Staff sign-in</h2>
     <p style="text-align:center;color:var(--muted);font-size:13px;margin:0 0 20px">Pristine Kosher operations</p>
     <input id="loginEmail" type="email" placeholder="Email" autocomplete="username" style="width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:10px;font-size:15px;margin-bottom:10px;background:var(--paper);color:var(--ink)">
@@ -160,12 +155,7 @@
 </div>
 
 <div class="top">
-  <svg class="mark" viewBox="0 0 100 100" aria-hidden="true">
-    <rect x="8" y="14" width="40" height="72" fill="#fff"/>
-    <path d="M20 30 h14 a13 13 0 0 1 0 26 h-14 z" fill="#0A0A0A"/>
-    <rect x="20" y="30" width="6" height="26" fill="#0A0A0A"/>
-    <path d="M50 14 h22 L46 50 L72 86 H50 L28 52 z" fill="#20A59F"/>
-  </svg>
+  <img class="mark" src="logo/pk-mark.jpg" alt="Pristine Kosher" style="width:38px;height:auto;background:#fff;border-radius:7px;padding:4px 5px;box-sizing:content-box;display:block">
   <div class="name">PRISTINE <span>KOSHER</span></div>
   <div class="crumb">Operations dashboard</div>
   <div class="navlinks">

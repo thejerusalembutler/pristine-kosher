@@ -21,7 +21,7 @@
   body{background:var(--mist);color:var(--ink);font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:flex;flex-direction:column;height:100vh}
 
   .top{display:flex;align-items:center;gap:14px;padding:14px 24px;background:var(--ink);color:#fff;flex:none}
-  .top .mark{width:30px;height:30px}
+  .top .mark{width:38px;height:auto}
   .top .name{font-weight:800;letter-spacing:.12em;font-size:13px}
   .top .name span{color:var(--teal)}
   .top .crumb{margin-left:6px;padding-left:14px;border-left:1px solid #2a3432;font-size:13px;color:#9aa7a4}
@@ -57,12 +57,7 @@
 <body>
 
 <div class="top">
-  <svg class="mark" viewBox="0 0 100 100" aria-hidden="true">
-    <rect x="8" y="14" width="40" height="72" fill="#fff"/>
-    <path d="M20 30 h14 a13 13 0 0 1 0 26 h-14 z" fill="#0A0A0A"/>
-    <rect x="20" y="30" width="6" height="26" fill="#0A0A0A"/>
-    <path d="M50 14 h22 L46 50 L72 86 H50 L28 52 z" fill="#20A59F"/>
-  </svg>
+  <img class="mark" src="logo/pk-mark.jpg" alt="Pristine Kosher" style="width:38px;height:auto;background:#fff;border-radius:7px;padding:4px 5px;box-sizing:content-box;display:block">
   <div class="name">PRISTINE <span>KOSHER</span></div>
   <div class="crumb">Day route optimizer</div>
   <div class="links"><a href="dashboard.html">Dashboard</a><a href="calendar.html">Calendar</a><a href="map.html">Map</a></div>
