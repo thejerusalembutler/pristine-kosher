@@ -301,6 +301,7 @@ async function saveBooking(){
     estimate: total(),
     notes: state.notes,
     media: state.media,
+    referral_source: state.referral || null,
     lat: state.lat || null,     // captured from address autocomplete
     lng: state.lng || null
   };
@@ -341,7 +342,7 @@ const blank = ()=>({
   addons:[],              // stovetop, warming, microwave, oven
   media:[],               // uploaded file names
   date:'', flex:null, time:null,   // time = "HH:MM" 24h anchor slot
-  name:'', phone:'', email:'', address:'', notes:'',
+  name:'', phone:'', email:'', address:'', notes:'', referral:'',
   lat:null, lng:null,              // captured from address autocomplete
   _timeMode:'best'                 // 'best' recommended times, or 'all' full grid
 });
@@ -522,9 +523,22 @@ function render(){
       + `<div class="field"><label for="n">Full name</label><input id="n" value="${esc(state.name)}" placeholder="Sarah Cohen"><div class="err">Please add your name.</div></div>
          <div class="row2">
            <div class="field"><label for="p">Phone</label><input id="p" value="${esc(state.phone)}" placeholder="(555) 123-4567"><div class="err">Add a phone we can reach you on.</div></div>
-           <div class="field"><label for="e">Email (optional)</label><input id="e" value="${esc(state.email)}" placeholder="you@email.com"></div>
+           <div class="field"><label for="e">Email</label><input id="e" type="email" value="${esc(state.email)}" placeholder="you@email.com"><div class="err">We need a valid email for your receipt.</div></div>
          </div>
          <div class="field"><label for="a">Home address</label><input id="a" value="${esc(state.address)}" placeholder="123 Main St, Apt 4"><div class="err">We need the address to plan the visit.</div></div>
+         <div class="field"><label for="ref">How did you hear about us?</label>
+           <select id="ref" style="width:100%;padding:13px 14px;border:1.5px solid var(--line);border-radius:11px;font-family:inherit;font-size:15px;background:var(--card);color:inherit">
+             <option value="">Choose one…</option>
+             <option ${state.referral==='friend'?'selected':''} value="friend">Friend / word of mouth</option>
+             <option ${state.referral==='returning'?'selected':''} value="returning">I've used you before</option>
+             <option ${state.referral==='google'?'selected':''} value="google">Google search</option>
+             <option ${state.referral==='instagram'?'selected':''} value="instagram">Instagram / social media</option>
+             <option ${state.referral==='whatsapp'?'selected':''} value="whatsapp">WhatsApp status / group</option>
+             <option ${state.referral==='flyer'?'selected':''} value="flyer">Flyer / ad</option>
+             <option ${state.referral==='shul'?'selected':''} value="shul">Shul / community</option>
+             <option ${state.referral==='other'?'selected':''} value="other">Other</option>
+           </select>
+         </div>
          <div class="field"><label for="nt">Notes for the team (optional)</label><textarea id="nt" rows="2" placeholder="Parking, stairs, pets, anything else…">${esc(state.notes)}</textarea></div>`;
   }
 
@@ -793,6 +807,7 @@ function bindStep(){
 
   const d=$('#d'); if(d) d.addEventListener('change',e=>{state.date=e.target.value; state.time=null; state._timeMode='best'; paintNav();});
   bindField('#n','name'); bindField('#p','phone'); bindField('#e','email'); bindField('#a','address'); bindField('#nt','notes');
+  const refSel=slot.querySelector('#ref'); if(refSel) refSel.addEventListener('change',e=>{ state.referral=e.target.value; });
   attachAddressAutocomplete();   // Google address dropdown on the address field
   slot.querySelectorAll('[data-goto]').forEach(b=>b.addEventListener('click',()=>{ jumpTo(b.dataset.goto); }));
 }
@@ -809,7 +824,7 @@ function stepValid(){
   if(s==='when') return !!state.date;
   if(s==='flex') return !!state.flex;
   if(s==='time') return !!state.time;
-  if(s==='contact') return state.name && state.phone && state.address;
+  if(s==='contact') return state.name && state.phone && state.address && state.email && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(state.email);
   return true;
 }
 function paintNav(){
@@ -822,7 +837,8 @@ function paintNav(){
 async function go(dir){
   if(dir>0){
     if(STEPS[step].id==='contact' && !stepValid()){
-      [['#n','name'],['#p','phone'],['#a','address']].forEach(([sel,k])=>{ if(!state[k]) slot.querySelector(sel)?.closest('.field')?.classList.add('invalid'); });
+      [['#n','name'],['#p','phone'],['#a','address'],['#e','email']].forEach(([sel,k])=>{ if(!state[k]) slot.querySelector(sel)?.closest('.field')?.classList.add('invalid'); });
+      if(state.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(state.email)) slot.querySelector('#e')?.closest('.field')?.classList.add('invalid');
       return;
     }
     if(!stepValid()) return;

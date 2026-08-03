@@ -65,10 +65,23 @@
   <div class="field"><label>Name *</label><input id="name" placeholder="Sarah Cohen"></div>
   <div class="row2">
     <div class="field"><label>Phone *</label><input id="phone" placeholder="(732) 555-0100"></div>
-    <div class="field"><label>Email (for receipt)</label><input id="email" type="email"></div>
+    <div class="field"><label>Email *</label><input id="email" type="email" placeholder="for receipt"></div>
   </div>
   <div class="field"><label>Address</label><input id="address" placeholder="Street, city"></div>
   <div class="field"><label>Market *</label><select id="market"><option value="">Choose…</option></select></div>
+  <div class="field"><label>How did they hear about us?</label>
+    <select id="referral">
+      <option value="">—</option>
+      <option value="friend">Friend / word of mouth</option>
+      <option value="returning">Used us before</option>
+      <option value="google">Google search</option>
+      <option value="instagram">Instagram / social</option>
+      <option value="whatsapp">WhatsApp</option>
+      <option value="flyer">Flyer / ad</option>
+      <option value="shul">Shul / community</option>
+      <option value="other">Other</option>
+    </select>
+  </div>
 
   <div class="sec">Service</div>
   <div class="field"><label>Base</label>
@@ -181,8 +194,9 @@ async function loadMarkets(){
 
 $('#submit').addEventListener('click',async()=>{
   const msg=$('#msg'); msg.className='msg'; msg.textContent='';
-  const name=$('#name').value.trim(), phone=$('#phone').value.trim(), market=$('#market').value;
-  if(!name||!phone||!market){ msg.className='msg err'; msg.textContent='Name, phone, and market are required.'; return; }
+  const name=$('#name').value.trim(), phone=$('#phone').value.trim(), market=$('#market').value, email=$('#email').value.trim();
+  if(!name||!phone||!market||!email){ msg.className='msg err'; msg.textContent='Name, phone, email, and market are required.'; return; }
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ msg.className='msg err'; msg.textContent='Please enter a valid email address.'; return; }
   $('#submit').disabled=true; $('#submit').textContent='Creating…';
   const paidAmt=+$('#paidAmt').value||0, paidMethod=$('#paidMethod').value;
   const rec={
@@ -192,6 +206,7 @@ $('#submit').addEventListener('click',async()=>{
     island:st.island||null, addons:st.addons, service_date:$('#date').value||null, time_slot:$('#time').value,
     flexibility:'limited', estimate:baseEstimate(),
     discount_type:(+$('#discVal').value>0?$('#discType').value:null), discount_value:(+$('#discVal').value||0),
+    referral_source:$('#referral').value||null,
     notes:$('#notes').value.trim(),
     offline_paid:paidAmt, offline_method:paidMethod||null
   };
