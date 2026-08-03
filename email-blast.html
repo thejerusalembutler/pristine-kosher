@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pristine Kosher — Email Blast</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="auth-gate.js"></script>
+<style>
+  :root{--teal:#20A59F;--teal-dark:#178079;--teal-soft:#E3F4F2;--ink:#0A0A0A;--paper:#FFFFFF;--mist:#F4F6F5;--line:#E7EBEA;--muted:#5C6663;--orange:#F78700;--green:#2FA84F}
+  @media (prefers-color-scheme: dark){:root{--teal:#2FBDB6;--teal-dark:#20A59F;--teal-soft:#123330;--ink:#F2F5F4;--paper:#0E1413;--mist:#0A0F0E;--line:#243230;--muted:#9AA7A4;--green:#4FC26B}}
+  :root[data-theme="light"]{--teal:#20A59F;--ink:#0A0A0A;--paper:#FFFFFF;--mist:#F4F6F5;--line:#E7EBEA;--muted:#5C6663;--card:#fff;--teal-soft:#E3F4F2;--green:#2FA84F}
+  :root[data-theme="dark"]{--teal:#2FBDB6;--ink:#F2F5F4;--paper:#0E1413;--mist:#0A0F0E;--line:#243230;--muted:#9AA7A4;--teal-soft:#123330;--green:#4FC26B}
+  *{box-sizing:border-box}html,body{margin:0}
+  body{background:var(--mist);color:var(--ink);font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.5}
+  .top{display:flex;align-items:center;gap:14px;padding:16px 28px;background:var(--ink);color:#fff}
+  .top .mark{width:32px;height:32px}.top .name{font-weight:800;letter-spacing:.12em;font-size:13px}.top .name span{color:var(--teal)}
+  .top .crumb{margin-left:6px;padding-left:16px;border-left:1px solid #2a3432;font-size:13px;color:#9aa7a4}
+  .top .links{margin-left:auto;display:flex;gap:14px;font-size:13px}.top .links a{color:#9aa7a4;text-decoration:none}.top .links a:hover{color:#fff}
+  .page{max-width:680px;margin:0 auto;padding:24px 20px 60px}
+  h1{font-size:24px;font-weight:800;margin:0 0 4px}.lead{color:var(--muted);font-size:14px;margin:0 0 22px}
+  .field{margin-bottom:16px}
+  label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+  input,select,textarea{width:100%;padding:12px 14px;border:1.5px solid var(--line);border-radius:11px;font-family:inherit;font-size:15px;background:var(--paper);color:inherit}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--teal)}
+  .aud{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:16px}
+  .aud .count{font-size:26px;font-weight:800;color:var(--teal-dark)}
+  .aud .sub{font-size:13px;color:var(--muted)}
+  .btn{width:100%;padding:15px;background:var(--teal);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit}
+  .btn:disabled{opacity:.5}
+  .warn{background:color-mix(in srgb,var(--orange) 12%,transparent);border:1px solid var(--orange);border-radius:11px;padding:13px 15px;font-size:13px;color:var(--muted);margin-bottom:16px}
+  .warn b{color:var(--ink)}
+  .msg{text-align:center;margin-top:14px;font-size:14px;min-height:20px}
+  .msg.ok{color:var(--green)}.msg.err{color:var(--orange)}
+  .preview{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:18px;margin-top:8px;font-size:14px}
+  .preview h4{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="top">
+  <svg class="mark" viewBox="0 0 100 100"><rect x="8" y="14" width="40" height="72" fill="#fff"/><path d="M20 30 h14 a13 13 0 0 1 0 26 h-14 z" fill="#0A0A0A"/><rect x="20" y="30" width="6" height="26" fill="#0A0A0A"/><path d="M50 14 h22 L46 50 L72 86 H50 L28 52 z" fill="#20A59F"/></svg>
+  <div class="name">PRISTINE <span>KOSHER</span></div>
+  <div class="crumb">Email blast</div>
+  <div class="links"><a href="dashboard.html">Dashboard</a><a href="customers.html">Customers</a></div>
+</div>
+
+<div class="page">
+  <h1>Email your customer list</h1>
+  <p class="lead">Send a one-off email to your customers — a Pesach reminder, a booking-open announcement, anything.</p>
+
+  <div class="warn">⚠️ <b>Send responsibly.</b> These go to real people. Keep it relevant, and every email includes an unsubscribe link. Until your domain is verified, emails come from a test address and may land in spam.</div>
+
+  <div class="aud">
+    <div class="count" id="count">…</div>
+    <div class="sub" id="countSub">customers with an email on file</div>
+  </div>
+
+  <div class="field"><label>Subject line</label><input id="subject" placeholder="Book your Pesach kashering now"></div>
+  <div class="field"><label>Message</label><textarea id="body" rows="7" placeholder="Write your message here. Basic HTML works — or just plain text."></textarea></div>
+
+  <button class="btn" id="send">Preview recipients &amp; send</button>
+  <div class="msg" id="msg"></div>
+</div>
+
+<script>
+const SUPABASE_URL='https://qkgdobpazyoxesyiznus.supabase.co';
+const SUPABASE_KEY='sb_publishable_cjaMPpEPhe-HxUd616SSRg_ShraAso2';
+const $=s=>document.querySelector(s);
+const H=()=>({apikey:SUPABASE_KEY,Authorization:`Bearer ${localStorage.getItem("pk_staff_token")||SUPABASE_KEY}`,'Content-Type':'application/json'});
+let emails=[];
+
+async function loadAudience(){
+  const r=await fetch(`${SUPABASE_URL}/rest/v1/customers?select=email&email=not.is.null`,{headers:H()});
+  const rows=r.ok?await r.json():[];
+  emails=[...new Set(rows.map(x=>(x.email||'').trim()).filter(e=>/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)))];
+  $('#count').textContent=emails.length;
+}
+
+$('#send').addEventListener('click',async()=>{
+  const msg=$('#msg'); msg.className='msg'; msg.textContent='';
+  const subject=$('#subject').value.trim(), body=$('#body').value.trim();
+  if(!subject||!body){ msg.className='msg err'; msg.textContent='Add a subject and a message.'; return; }
+  if(!emails.length){ msg.className='msg err'; msg.textContent='No customer emails found.'; return; }
+  if(!confirm(`Send "${subject}" to ${emails.length} customers?`)) return;
+  $('#send').disabled=true; $('#send').textContent='Sending…';
+  const html=body.replace(/\n/g,'<br>');
+  const res=await fetch(`${SUPABASE_URL}/functions/v1/send-email`,{method:'POST',headers:H(),
+    body:JSON.stringify({action:'blast',subject,message_html:`<div style="font-size:15px;color:#333">${html}</div>`,to:emails})});
+  const data=await res.json();
+  if(data.ok){ msg.className='msg ok'; msg.textContent=`✓ Sent to ${data.sent} of ${data.total} customers.`; }
+  else { msg.className='msg err'; msg.textContent='Failed: '+(data.error||'unknown'); }
+  $('#send').disabled=false; $('#send').textContent='Preview recipients & send';
+});
+
+PKAuth.protect(loadAudience);
+</script>
+</body>
+</html>
