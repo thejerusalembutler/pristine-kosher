@@ -213,7 +213,7 @@ function render(){
       <div class="jrows">
         <div class="jrow"><span class="ic">📍</span><span>${esc(j.address||j.market||'')}</span></div>
         <div class="jrow"><span class="ic">📞</span><span>${j.phone?`<a href="tel:${digits}">${esc(j.phone)}</a>`:'—'}</span></div>
-        <div class="jrow"><span class="ic">💵</span><span class="owed big">$${j.estimate||0} <span style="font-weight:400;color:var(--muted);font-size:13px">to collect</span></span></div>
+        <div class="jrow"><span class="ic">💵</span><span class="owed big">$${Math.max(0, jobTotal(j) - (+j.deposit_paid||0) - (+j.balance_charged||0) - (+j.offline_paid||0))} <span style="font-weight:400;color:var(--muted);font-size:13px">to collect${(+j.deposit_paid||0)>0?` ($${j.deposit_paid} deposit already paid)`:''}</span></span></div>
         ${j.notes?`<div class="jrow"><span class="ic">📝</span><span>${esc(j.notes)}</span></div>`:''}
       </div>
       <div class="arrival">
@@ -245,6 +245,7 @@ function render(){
           <button class="paybtn" data-pay="check" data-id="${j.id}">Check</button>
           <button class="paybtn unpaid" data-pay="unpaid" data-id="${j.id}">Didn’t pay — office follow-up</button>
         </div>
+        <div class="payerr" style="display:none;color:var(--orange);font-size:13px;margin-bottom:8px"></div>
         <button class="donebtn" data-done="${j.id}" disabled>Select payment, then mark done</button>
       </div></div>`;
   }).join('');
@@ -280,19 +281,40 @@ function render(){
   }));
 }
 
+function jobTotal(j){
+  let t=j.estimate||0;
+  if(j.discount_type==='percent') t=t*(1-(j.discount_value||0)/100);
+  else if(j.discount_type==='amount') t=t-(j.discount_value||0);
+  return Math.max(0,Math.round(t));
+}
 async function markDone(id,pay){
   // gather the checklist, extra notes, hours, and cash from this job's card
   const card=document.querySelector(`.job[data-job="${id}"]`);
+  const job=jobs.find(j=>j.id===id);
   const itemsDone=[...card.querySelectorAll('.itemchk:checked')].map(c=>c.dataset.item);
   const extra=card.querySelector('.extra').value.trim();
   const workMin=+card.querySelector('.fWork').value||null;
   const driveMin=+card.querySelector('.fDrive').value||null;
   const cash=+card.querySelector('.fCash').value||0;
+
+  // RULE: a job can only be marked done once fully paid.
+  // total covered = deposit already paid + card balance charged + offline recorded + cash collected now
+  const total = jobTotal(job);
+  const covered = (+job.deposit_paid||0)+(+job.balance_charged||0)+(+job.offline_paid||0)+cash;
+  if(pay!=='unpaid' && covered < total){
+    const short = total - covered;
+    const err = card.querySelector('.payerr');
+    if(err){ err.textContent = `Not fully paid — $${short} still owed (total $${total}, covered $${covered}). Collect the rest or mark “didn’t pay”.`; err.style.display='block'; }
+    return;
+  }
+
+  const fullyPaid = covered >= total;
   const body={
     completed:true, completed_at:new Date().toISOString(), payment_method:pay,
     payment_note:(pay==='unpaid'?'office follow-up':''), status:'confirmed',
     items_done:itemsDone, worker_notes:extra||null,
-    work_minutes:workMin, drive_minutes:driveMin, cash_collected:cash
+    work_minutes:workMin, drive_minutes:driveMin, cash_collected:cash,
+    paid_in_full:fullyPaid
   };
   await fetch(`${SUPABASE_URL}/rest/v1/bookings?id=eq.${id}`,{method:'PATCH',
     headers:{...H(),'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify(body)});
