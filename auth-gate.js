@@ -76,11 +76,32 @@
     }, extra||{});
   }
 
+  // Floating universal customer search — appears on every staff page.
+  // Type name/email/phone + Enter → jumps to the customer page with the query.
+  function addSearchBar(){
+    if(document.getElementById('pkSearchBar')) return;
+    // don't add it on the customer page itself (it has its own search)
+    if(location.pathname.endsWith('customers.html')) return;
+    const bar = document.createElement('div');
+    bar.id = 'pkSearchBar';
+    bar.style.cssText = 'position:fixed;top:12px;right:12px;z-index:9998;display:flex;align-items:center;gap:0;background:rgba(255,255,255,.96);border:1.5px solid #E4E8E7;border-radius:11px;box-shadow:0 6px 24px rgba(0,0,0,.12);overflow:hidden';
+    bar.innerHTML = `
+      <span style="padding:0 4px 0 12px;color:#5C6663;font-size:14px">🔍</span>
+      <input id="pkSearchInput" placeholder="Find customer…" style="border:none;outline:none;padding:10px 12px 10px 6px;font-size:14px;font-family:inherit;width:180px;background:transparent;color:#0A0A0A">`;
+    document.body.appendChild(bar);
+    const inp = bar.querySelector('#pkSearchInput');
+    inp.addEventListener('keydown', e=>{
+      if(e.key==='Enter' && inp.value.trim()){
+        location.href = `customers.html?q=${encodeURIComponent(inp.value.trim())}`;
+      }
+    });
+  }
+
   // public API
   window.PKAuth = {
     async protect(onReady){
-      if(await validSession()){ onReady(); }
-      else { showGate(onReady); }
+      if(await validSession()){ addSearchBar(); onReady(); }
+      else { showGate(()=>{ addSearchBar(); onReady(); }); }
     },
     logout,
     token,

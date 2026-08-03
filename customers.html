@@ -39,7 +39,10 @@
   .cav{width:44px;height:44px;border-radius:12px;background:var(--teal-soft);color:var(--teal-dark);display:grid;place-items:center;font-weight:800;flex:none}
   .cname{font-weight:800;font-size:17px}
   .csub{font-size:13px;color:var(--muted)}
-  .cstats{margin-left:auto;text-align:right;font-size:13px}
+  .reach{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+  .reachbtn{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;text-decoration:none;color:var(--teal-dark);background:var(--teal-soft);border-radius:8px;padding:5px 12px}
+  .reachbtn:hover{background:var(--teal);color:#fff}
+  .cstats{margin-left:auto;text-align:right;font-size:13px;flex:none}
   .cstats b{font-size:16px;font-variant-numeric:tabular-nums}
   .jobrow{display:grid;grid-template-columns:70px 1fr auto;gap:14px;padding:12px 20px;border-bottom:1px solid var(--line);font-size:14px;align-items:center}
   .jobrow:last-child{border-bottom:none}
@@ -89,30 +92,58 @@ function discountedTotal(r){
 }
 function paidSoFar(r){ return (+r.deposit_paid||0)+(+r.balance_charged||0)+(+r.offline_paid||0)+(+r.cash_collected||0); }
 
+const digits=s=>(s||'').replace(/[^0-9]/g,'');
 async function search(){
   const q=$('#q').value.trim();
   if(!q){ return; }
   $('#results').innerHTML='<div class="empty">Searching…</div>';
-  // search by name OR phone (case-insensitive partial)
   const enc=encodeURIComponent(`%${q}%`);
-  const url=`${SUPABASE_URL}/rest/v1/bookings?select=*&or=(customer_name.ilike.${enc},phone.ilike.${enc})&order=service_date.desc`;
-  const res=await fetch(url,{headers:H()});
-  const rows=res.ok?await res.json():[];
-  if(!rows.length){ $('#results').innerHTML=`<div class="empty">No customers found for “${esc(q)}”.</div>`; return; }
-  // group by customer (name+phone)
-  const groups={};
-  rows.forEach(r=>{ const key=(r.customer_name||'')+'|'+(r.phone||''); (groups[key] ||= []).push(r); });
-  $('#results').innerHTML=Object.values(groups).map(jobs=>{
-    const c=jobs[0];
-    const totalBooked=jobs.reduce((s,j)=>s+discountedTotal(j),0);
-    const totalPaid=jobs.reduce((s,j)=>s+paidSoFar(j),0);
+  const dq=encodeURIComponent(`%${digits(q)}%`);
+  // search THREE sources in parallel: imported directory, live bookings, past jobs
+  const [custR, bkR, pastR] = await Promise.all([
+    fetch(`${SUPABASE_URL}/rest/v1/customers?select=*&or=(full_name.ilike.${enc},phone.ilike.${dq},email.ilike.${enc})&limit=50`,{headers:H()}),
+    fetch(`${SUPABASE_URL}/rest/v1/bookings?select=*&or=(customer_name.ilike.${enc},phone.ilike.${dq},email.ilike.${enc})&order=service_date.desc`,{headers:H()}),
+    fetch(`${SUPABASE_URL}/rest/v1/past_jobs?select=client,address,city,state,scheduled_raw,total,tech,job_type,job_number&or=(client.ilike.${enc})&order=scheduled_raw.desc&limit=100`,{headers:H()})
+  ]);
+  const customers = custR.ok?await custR.json():[];
+  const bookings = bkR.ok?await bkR.json():[];
+  const pastJobs = pastR.ok?await pastR.json():[];
+
+  // merge into people keyed by normalized name (+ phone)
+  const people={};
+  function keyFor(name,phone){ return (name||'').trim().toLowerCase(); }
+  customers.forEach(c=>{ const k=keyFor(c.full_name); (people[k] ||= {name:c.full_name,contact:c,live:[],past:[]}); people[k].contact=c; if(c.full_name) people[k].name=c.full_name; });
+  bookings.forEach(b=>{ const k=keyFor(b.customer_name); (people[k] ||= {name:b.customer_name,contact:null,live:[],past:[]}); people[k].live.push(b); if(!people[k].contact) people[k].contact={full_name:b.customer_name,phone:b.phone,email:b.email,address:b.address}; });
+  pastJobs.forEach(p=>{ const k=keyFor(p.client); (people[k] ||= {name:p.client,contact:null,live:[],past:[]}); people[k].past.push(p); if(!people[k].contact) people[k].contact={full_name:p.client,address:(p.address||'')+' '+(p.city||'')}; });
+
+  const list=Object.values(people).filter(p=>p.name);
+  if(!list.length){ $('#results').innerHTML=`<div class="empty">No customers found for “${esc(q)}”.</div>`; return; }
+
+  $('#results').innerHTML=list.map(p=>{
+    const c=p.contact||{};
+    const jobs=p.live;
+    const totalBooked=jobs.reduce((s,j)=>s+discountedTotal(j),0) + p.past.reduce((s,j)=>s+(+j.total||0),0);
+    const totalPaid=jobs.reduce((s,j)=>s+paidSoFar(j),0) + p.past.reduce((s,j)=>s+(+j.total||0),0);
+    const pastRows = p.past.map(j=>`<div class="jobrow">
+        <span class="jn">#${j.job_number||'—'}</span>
+        <div class="jinfo"><b>${esc((j.scheduled_raw||'').split(' ').slice(0,4).join(' ')||'past')}</b> · $${Math.round(+j.total||0)}
+          <small>${esc(j.job_type||'')} · ${esc(j.address||'')} ${esc(j.city||'')} · tech: ${esc(j.tech||'—')}</small></div>
+        <div class="jright"><span class="pill paid">past</span></div>
+      </div>`).join('');
+    const totalJobs = jobs.length + p.past.length;
     return `<div class="cust">
       <div class="chead">
-        <div class="cav">${initials(c.customer_name)}</div>
-        <div><div class="cname">${esc(c.customer_name||'Unknown')}</div>
-          <div class="csub">${esc(c.phone||'')}${c.email?' · '+esc(c.email):''}</div></div>
-        <div class="cstats"><div>${jobs.length} booking${jobs.length>1?'s':''}</div>
-          <b>$${totalPaid}</b> paid of $${totalBooked}</div>
+        <div class="cav">${initials(p.name)}</div>
+        <div style="flex:1;min-width:0"><div class="cname">${esc(p.name||'Unknown')}</div>
+          <div class="csub">${esc(c.phone||'')}${c.email?' · '+esc(c.email):''}${c.address?' · '+esc(c.address):''}</div>
+          <div class="reach">
+            ${c.phone?`<a class="reachbtn" href="tel:${digits(c.phone)}">📞 Call</a>
+            <a class="reachbtn" href="sms:${digits(c.phone)}">💬 Text</a>`:''}
+            ${c.email?`<a class="reachbtn" href="mailto:${esc(c.email)}">✉️ Email</a>`:''}
+          </div>
+        </div>
+        <div class="cstats"><div>${totalJobs} job${totalJobs===1?'':'s'} on record</div>
+          <b>$${totalPaid}</b> lifetime</div>
       </div>
       ${jobs.map(j=>{
         const total=discountedTotal(j), paid=paidSoFar(j), owe=Math.max(0,total-paid);
@@ -124,13 +155,19 @@ async function search(){
             <span class="pill ${owe>0?'owe':'paid'}">${owe>0?'owes $'+owe:'paid'}</span></div>
         </div>`;
       }).join('')}
+      ${pastRows}
+      ${totalJobs===0?'<div class="jobrow"><div class="jinfo" style="color:var(--muted)">In directory — no booking history found.</div></div>':''}
     </div>`;
   }).join('');
 }
 $('#go').addEventListener('click',search);
 $('#q').addEventListener('keydown',e=>{ if(e.key==='Enter') search(); });
 
-PKAuth.protect(()=>{ /* ready; user searches manually */ });
+PKAuth.protect(()=>{
+  // if arrived via the universal search bar (?q=...), pre-fill and search
+  const q=new URLSearchParams(location.search).get('q');
+  if(q){ $('#q').value=q; search(); }
+});
 </script>
 </body>
 </html>

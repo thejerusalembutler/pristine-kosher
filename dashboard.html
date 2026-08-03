@@ -913,7 +913,21 @@ async function doLogin(email, password){
 }
 function unlock(){
   document.getElementById('loginGate').style.display = 'none';
+  addCustomerSearchBar();
   startDashboard();
+}
+// universal customer search bar (jumps to customers page)
+function addCustomerSearchBar(){
+  if(document.getElementById('pkSearchBar')) return;
+  const bar=document.createElement('div');
+  bar.id='pkSearchBar';
+  bar.style.cssText='position:fixed;top:12px;right:12px;z-index:9998;display:flex;align-items:center;background:var(--card);border:1.5px solid var(--line);border-radius:11px;box-shadow:0 6px 24px rgba(0,0,0,.12);overflow:hidden';
+  bar.innerHTML=`<span style="padding:0 4px 0 12px;color:var(--muted);font-size:14px">🔍</span>
+    <input id="pkSearchInput" placeholder="Find customer…" style="border:none;outline:none;padding:10px 12px 10px 6px;font-size:14px;font-family:inherit;width:180px;background:transparent;color:var(--ink)">`;
+  document.body.appendChild(bar);
+  bar.querySelector('#pkSearchInput').addEventListener('keydown',e=>{
+    if(e.key==='Enter'&&e.target.value.trim()) location.href=`customers.html?q=${encodeURIComponent(e.target.value.trim())}`;
+  });
 }
 
 document.getElementById('loginBtn').addEventListener('click', async ()=>{
