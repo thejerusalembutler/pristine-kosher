@@ -70,3 +70,9 @@ Success → `{"flag":true,"msg":"Job deleted"}`
 ## Test function
 
 `supabase/functions/workiz-test/index.ts` — self-diagnosing prober. Kept for future auth debugging.
+
+## Live status (2026-08-04)
+- Test bookings wiped (was 218 junk rows). Bookings table started fresh.
+- Stage 2 pull run LIVE: 98 real Workiz jobs now in the app, all with workiz_job_id,
+  ai_locked=true (came from Workiz), and Workiz lat/lng (no Google geocode).
+- Workiz has ~100 jobs total (page 2 empty). `records` max = 100/page.
