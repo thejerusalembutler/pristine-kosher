@@ -88,3 +88,13 @@ Success → `{"flag":true,"msg":"Job deleted"}`
 ## Blocked on v1 (need v2 keys later)
 - Call logs & SMS logs: no v1 endpoint exists; v1 keys are rejected by v2 (/crm/api/v2).
   Stage 3 (comms history in CRM) waits until v2 credentials are available.
+
+## v2 API — still blocked (2026-08-04)
+- Generated v2 creds: Key ID "KEY-XE2KwLeDPa3yqZMA" + a secret. Tested ~15 auth
+  styles (headers, Bearer, Basic, token-exchange endpoints) — ALL return
+  401 {"valid":false}, even on non-existent paths. Uniform front-door rejection
+  = credentials not authorized on this plan (not a format problem).
+- ACTION FOR NOAM: ask Workiz support for the correct v2 auth method + whether
+  v2 is enabled on the plan. Until then, line-items + call/SMS logs stay on hold.
+- Meanwhile: itemized job notes (buildComment) give a clean priced breakdown as
+  a stand-in for real v2 line-items.

@@ -105,18 +105,58 @@ Deno.serve(async (req) => {
   }
 });
 
-// A readable summary of what was booked, dropped into the Workiz job comments.
+// Pricing (mirrors the booking flow's single source of truth) so notes can show
+// each line with its price — an itemized breakdown until real v2 line-items exist.
+const PRICE = {
+  counters: { small: 230, medium: 265, large: 300 } as Record<string, number>,
+  sinks: { 1: 100, 2: 155, 3: 185 } as Record<string, number>,
+  island: { small: 30, large: 50 } as Record<string, number>,
+  addon: { stovetop: 50, warming: 40, microwave: 25, oven: 10 } as Record<string, number>,
+};
+const ADDON_LABEL: Record<string, string> = {
+  stovetop: "Stovetop", warming: "Warming drawer", microwave: "Microwave", oven: "Oven",
+};
+function money(n: number) { return `$${n}`; }
+function pad(label: string, price: number) {
+  // "Counters (large) ............ $300"
+  const left = label.length > 34 ? label.slice(0, 34) : label;
+  const dots = ".".repeat(Math.max(2, 38 - left.length - money(price).length));
+  return `${left} ${dots} ${money(price)}`;
+}
+
+// An itemized, invoice-like breakdown dropped into the Workiz job notes.
 function buildComment(b: Record<string, unknown>): string {
-  const lines: string[] = [];
-  if (b.base) lines.push(`Service: ${b.base}`);
-  if (b.size) lines.push(`Size: ${b.size}`);
-  if (b.sink_count) lines.push(`Sinks: ${b.sink_count}`);
-  if (b.island) lines.push(`Island: ${b.island}`);
-  if (Array.isArray(b.addons) && b.addons.length) lines.push(`Add-ons: ${(b.addons as string[]).join(", ")}`);
-  if (b.estimate) lines.push(`Estimate: $${b.estimate}`);
-  if (b.flexibility) lines.push(`Flexibility: ${b.flexibility}`);
-  if (b.notes) lines.push(`Notes: ${b.notes}`);
-  lines.push(`[Booked via app · booking ${b.id}]`);
+  const items: string[] = [];
+  let total = 0;
+
+  const base = String(b.base || "").toLowerCase();
+  if (base === "counters") {
+    const size = String(b.size || "").toLowerCase();
+    const p = PRICE.counters[size];
+    if (p) { items.push(pad(`Counters (${size})`, p)); total += p; }
+    if (b.island) {
+      const ip = PRICE.island[String(b.island).toLowerCase()];
+      if (ip) { items.push(pad(`Island (${b.island})`, ip)); total += ip; }
+    }
+  } else if (base === "sinks") {
+    const n = Number(b.sink_count || 0);
+    const p = PRICE.sinks[n];
+    if (p) { items.push(pad(`Sinks (${n})`, p)); total += p; }
+  }
+
+  if (Array.isArray(b.addons)) {
+    for (const a of b.addons as string[]) {
+      const p = PRICE.addon[a];
+      if (p) { items.push(pad(ADDON_LABEL[a] || a, p)); total += p; }
+    }
+  }
+
+  const lines: string[] = ["— SERVICE —", ...items];
+  const est = Number(b.estimate || total);
+  lines.push(pad("TOTAL", est));
+  if (b.flexibility) lines.push(`\nTiming: ${b.flexibility}`);
+  if (b.notes) lines.push(`Customer notes: ${b.notes}`);
+  lines.push(`\n[Booked via app · booking ${b.id}]`);
   return lines.join("\n");
 }
 
