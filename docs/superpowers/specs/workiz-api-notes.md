@@ -1,0 +1,57 @@
+# Workiz API — Working Connection Notes (verified 2026-08-04)
+
+**Status: ✅ CONNECTED.** The API works on Noam's current plan (NO Ultimate needed). Reads confirmed
+with real account data.
+
+## The credentials (v1)
+
+Two keys from Workiz → Settings → Integrations → Developer (v1 section):
+- **Token**: starts `api_...` — stored in Supabase secret `WORKIZ_API_TOKEN`
+- **Secret**: starts `sec_...` — stored in Supabase secret `WORKIZ_API_SECRET`
+
+The token is enough for READ calls. The secret is for "signed" write actions (to confirm on write
+tasks).
+
+## The winning format (this is what took 30 tries to find)
+
+**Base:** `https://api.workiz.com/api/v1/`
+**The TOKEN goes FIRST in the URL path, right after `/v1/`.** This was the key insight — not after
+the resource name.
+
+**Working read call (list jobs):**
+```
+GET https://api.workiz.com/api/v1/{TOKEN}/job/all/?start_date=2020-01-01&offset=0&records=50&only_open=false
+```
+
+Returns: `{ "flag": true, "data": [ { job }, ... ] }`  (`flag:true` = success)
+
+### What did NOT work (so we don't retry)
+- Anything on `/crm/api/v2/...` — those need **v2** credentials (Noam only has v1 keys). All v2
+  attempts returned `401 {"valid":false}`.
+- Token placed AFTER the resource (`/job/all/{TOKEN}/`) → `Forbidden / malformed API key`.
+- `Authorization: Bearer` headers → rejected (that's the v2 style).
+
+## Real job fields (from live data)
+
+| Workiz field | Meaning | Maps to app |
+|---|---|---|
+| `UUID` | Workiz job id | `bookings.workiz_job_id` (matching pin) |
+| `SerialId` | human job number | reference |
+| `JobDateTime` / `JobEndDateTime` | schedule | `service_date` + `time_slot` |
+| `JobTotalPrice` / `JobAmountDue` / `SubTotal` | money | estimate / balance |
+| `Status` / `SubStatus` | job status | status |
+| `Phone` / `Email` / `FirstName` / `LastName` | customer | customer match (by phone) |
+| `Address` / `City` / `State` / `LocationKey` | address | address + geocode |
+| `LineItems` | what they booked | services/add-ons |
+| `ClientId` | Workiz client id | customer pin |
+
+## Endpoints to confirm next (v1)
+
+- Create job (push booking → Workiz) — likely `POST /api/v1/{TOKEN}/job/create/` (verify).
+- Call logs / SMS logs — find v1 endpoint names.
+- Create payment — likely needs the SECRET (signed) — verify.
+- Technicians — for worker assignment.
+
+## Test function
+
+`supabase/functions/workiz-test/index.ts` — self-diagnosing prober. Kept for future auth debugging.

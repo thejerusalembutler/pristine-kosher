@@ -14,63 +14,33 @@ const cors = {
   "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
 };
 
-// A short, safe search request body: ask for a few jobs.
-const searchBody = { entityType: "job", limit: 3 };
+// Real endpoint (from the docs screenshot): GET /crm/api/v2/jobs?pageSize=3
+const JOBS = `${BASE}/jobs?pageSize=3&page=1`;
 
-// Candidate auth styles to try, in order. First one that returns real data wins.
+// Candidate auth styles to try against the REAL /jobs endpoint. First that returns data wins.
 function attempts(): { name: string; url: string; init: RequestInit }[] {
-  const jsonHeaders = { "Content-Type": "application/json" };
+  // Docs say: Authorization: Bearer <token>. Try every plausible <token> value.
   return [
-    {
-      name: "POST body + auth headers (auth-key/auth-secret)",
-      url: `${BASE}/search`,
-      init: { method: "POST", headers: { ...jsonHeaders, "auth-key": TOKEN, "auth-secret": SECRET }, body: JSON.stringify(searchBody) },
-    },
-    {
-      name: "POST body + Authorization Bearer token",
-      url: `${BASE}/search`,
-      init: { method: "POST", headers: { ...jsonHeaders, Authorization: `Bearer ${TOKEN}` }, body: JSON.stringify(searchBody) },
-    },
-    {
-      name: "POST body + apikey/apisecret headers",
-      url: `${BASE}/search`,
-      init: { method: "POST", headers: { ...jsonHeaders, apikey: TOKEN, apisecret: SECRET }, body: JSON.stringify(searchBody) },
-    },
-    {
-      name: "GET with token+secret in query",
-      url: `${BASE}/search?token=${encodeURIComponent(TOKEN)}&secret=${encodeURIComponent(SECRET)}&entityType=job&limit=3`,
-      init: { method: "GET" },
-    },
-    {
-      name: "GET with token+secret headers",
-      url: `${BASE}/search?entityType=job&limit=3`,
-      init: { method: "GET", headers: { "auth-key": TOKEN, "auth-secret": SECRET } },
-    },
-    {
-      name: "v1-style: token in URL path, GET job/all",
-      url: `https://api.workiz.com/api/v1/job/all/${TOKEN}/?records=3&offset=0`,
-      init: { method: "GET" },
-    },
-    {
-      name: "v2 token in path: /crm/api/v2/{token}/search",
-      url: `${BASE}/${TOKEN}/search?entityType=job&limit=3`,
-      init: { method: "GET", headers: { "auth-secret": SECRET } },
-    },
-    {
-      name: "POST body includes token+secret",
-      url: `${BASE}/search`,
-      init: { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...searchBody, token: TOKEN, secret: SECRET }) },
-    },
-    {
-      name: "X-API headers (X-API-Key / X-API-Secret)",
-      url: `${BASE}/search`,
-      init: { method: "POST", headers: { "Content-Type": "application/json", "X-API-Key": TOKEN, "X-API-Secret": SECRET }, body: JSON.stringify(searchBody) },
-    },
-    {
-      name: "Basic auth (token:secret)",
-      url: `${BASE}/search`,
-      init: { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Basic ${btoa(`${TOKEN}:${SECRET}`)}` }, body: JSON.stringify(searchBody) },
-    },
+    { name: "Bearer token",
+      url: JOBS, init: { method: "GET", headers: { Authorization: `Bearer ${TOKEN}` } } },
+    { name: "Bearer secret",
+      url: JOBS, init: { method: "GET", headers: { Authorization: `Bearer ${SECRET}` } } },
+    { name: "Bearer token:secret",
+      url: JOBS, init: { method: "GET", headers: { Authorization: `Bearer ${TOKEN}:${SECRET}` } } },
+    { name: "Bearer secret:token",
+      url: JOBS, init: { method: "GET", headers: { Authorization: `Bearer ${SECRET}:${TOKEN}` } } },
+    { name: "Bearer token.secret",
+      url: JOBS, init: { method: "GET", headers: { Authorization: `Bearer ${TOKEN}.${SECRET}` } } },
+    { name: "Bearer base64(token:secret)",
+      url: JOBS, init: { method: "GET", headers: { Authorization: `Bearer ${btoa(`${TOKEN}:${SECRET}`)}` } } },
+    { name: "Bearer token+secret concatenated",
+      url: JOBS, init: { method: "GET", headers: { Authorization: `Bearer ${TOKEN}${SECRET}` } } },
+    { name: "Bearer token (strip api_ prefix)",
+      url: JOBS, init: { method: "GET", headers: { Authorization: `Bearer ${TOKEN.replace(/^api_/, "")}` } } },
+    { name: "Bearer secret (strip sec_ prefix)",
+      url: JOBS, init: { method: "GET", headers: { Authorization: `Bearer ${SECRET.replace(/^sec_/, "")}` } } },
+    { name: "Bearer token secret (space)",
+      url: JOBS, init: { method: "GET", headers: { Authorization: `Bearer ${TOKEN} ${SECRET}` } } },
   ];
 }
 
