@@ -45,12 +45,27 @@ Returns: `{ "flag": true, "data": [ { job }, ... ] }`  (`flag:true` = success)
 | `LineItems` | what they booked | services/add-ons |
 | `ClientId` | Workiz client id | customer pin |
 
+## Verified WRITE endpoints (2026-08-04)
+
+**Writes require the SECRET**, passed as `auth_secret` in the JSON body (token still in URL path).
+
+### Create a job — `POST /api/v1/{TOKEN}/job/create/`
+Body (JSON). Required fields (discovered by probing):
+`FirstName`, `LastName`, `Phone`, `Address`, `City`, `State`, `PostalCode`, `JobType`,
+plus `auth_secret`. Optional: `JobDateTime`, `Email`, `Comments`, `JobNotes`, etc.
+Success → `{"flag":true,"msg":"Created Job","data":[{"UUID":"...","SerialId":"...","ClientId":"..."}],"code":201}`
+The returned `UUID` is the matching pin to store on the booking.
+
+### Delete a job — `POST /api/v1/{TOKEN}/job/delete/`
+Body: `{ "auth_secret": "...", "ID": "<the job UUID>" }`  (field is `ID`, value is the UUID).
+Success → `{"flag":true,"msg":"Job deleted"}`
+
 ## Endpoints to confirm next (v1)
 
-- Create job (push booking → Workiz) — likely `POST /api/v1/{TOKEN}/job/create/` (verify).
+- Assign technician to a job (Team field) — find endpoint.
 - Call logs / SMS logs — find v1 endpoint names.
 - Create payment — likely needs the SECRET (signed) — verify.
-- Technicians — for worker assignment.
+- Technicians list/create — for worker assignment.
 
 ## Test function
 
