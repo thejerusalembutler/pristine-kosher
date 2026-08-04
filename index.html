@@ -113,6 +113,7 @@
 
   /* reassurance note */
   .reassure{background:var(--teal-soft);border-radius:12px;padding:14px 16px;font-size:13.5px;color:var(--teal-dark);display:flex;gap:10px;align-items:flex-start;margin:0 0 20px;line-height:1.5}
+  .crunch-block{background:#fff4e6;border:1px solid var(--orange);border-radius:12px;padding:14px 16px;font-size:13.5px;color:#8a4b00;margin-top:14px;line-height:1.5}
   .reassure b{font-weight:700}
 
   /* time grid */
@@ -319,6 +320,38 @@ async function saveBooking(){
   }catch(err){ console.error('Save error:', err); return null; }
 }
 
+/* ---------------- Crunch-week booking guardrails ----------------
+   In the last week before Pesach, tighten online booking:
+   - within 12 hrs of the appointment: no online booking at all.
+   - within 36 hrs: customer must take a suggested time (no manual override).
+   Cutoffs are measured from "now" to the chosen appointment start time. */
+const PESACH_2027 = new Date('2027-04-21T18:00:00');            // first Seder eve
+const LAST_WEEK_START = new Date('2027-04-14T00:00:00');        // 1 week before
+const NO_BOOK_HOURS = 12;      // under this many hours out -> can't book online
+const NO_OVERRIDE_HOURS = 36;  // under this many hours out -> can't pick own time
+
+// Hours from now until the chosen appointment start (date + time slot). null if unset.
+function hoursUntilAppointment(){
+  if(!state.date || !state.time) return null;
+  const appt = new Date(`${state.date}T${state.time}:00`);
+  return (appt.getTime() - Date.now()) / 36e5;
+}
+// Are we in the last week before Pesach (based on the service date)?
+function inLastWeek(){
+  if(!state.date) return false;
+  const d = new Date(`${state.date}T00:00:00`);
+  return d >= LAST_WEEK_START && d <= PESACH_2027;
+}
+// Crunch guard verdict for the chosen slot: 'ok' | 'no-override' | 'too-soon'.
+function crunchGuard(){
+  if(!inLastWeek()) return 'ok';
+  const h = hoursUntilAppointment();
+  if(h===null) return 'ok';
+  if(h < NO_BOOK_HOURS) return 'too-soon';
+  if(h < NO_OVERRIDE_HOURS) return 'no-override';
+  return 'ok';
+}
+
 /* ---------------- Pricing (single source of truth) ---------------- */
 const PRICE = {
   counters: {small:230, medium:265, large:300},
@@ -489,11 +522,23 @@ function render(){
     // Two modes: 'best' (recommended times) or 'all' (full grid). Default to 'best'.
     if(!state._timeMode) state._timeMode='best';
 
-    if(state._timeMode==='best'){
+    // In the last week before Pesach, if this day is within 36 hrs, remove the
+    // "see all times" override — the customer must take a suggested time.
+    const noOverride = inLastWeek() && (()=>{
+      const dow0 = dayOfDate(); const openMin = (HOURS[dow0]?.open ?? 8*60);
+      const earliest = new Date(`${state.date}T00:00:00`); earliest.setMinutes(openMin);
+      return (earliest.getTime() - Date.now())/36e5 < NO_OVERRIDE_HOURS;
+    })();
+
+    if(state._timeMode==='best' || noOverride){
+      if(noOverride && state._timeMode==='all') state._timeMode='best';
       html = head('Our best times for you',
-        'These times let us get to you most efficiently. Pick one — or see all times if none work.')
+        noOverride
+          ? 'It’s close to Pesach — please choose one of these times so we can route to you in time.'
+          : 'These times let us get to you most efficiently. Pick one — or see all times if none work.')
         + `<div id="bestWrap"><div class="reassure">🔎 <span>Finding the best times for ${esc(dayName)}…</span></div></div>`
-        + `<button class="btn link" id="showAll" style="margin-top:8px">None of these work for me →</button>`;
+        + (noOverride ? '' : `<button class="btn link" id="showAll" style="margin-top:8px">None of these work for me →</button>`)
+        + `<div id="crunchBlock" class="crunch-block" style="display:none"></div>`;
     } else {
       const dow = dayOfDate();
       const {open,close}=HOURS[dow];
@@ -509,7 +554,8 @@ function render(){
         + (flexible ? `<div class="timekey">
             <span><i class="swatch a"></i> Your ideal time</span>
             <span><i class="swatch b"></i> You’ll allow this too</span>
-          </div>` : '');
+          </div>` : '')
+        + `<div id="crunchBlock" class="crunch-block" style="display:none"></div>`;
     }
   }
 
@@ -837,6 +883,14 @@ async function go(dir){
       return;
     }
     if(!stepValid()) return;
+    // Crunch guard: within 12 hrs of the appointment in the last week -> block online booking.
+    if(STEPS[step].id==='time' && crunchGuard()==='too-soon'){
+      const box = slot.querySelector('#crunchBlock');
+      const msg = `This time is less than 12 hours away. In the final days before Pesach we can’t take same-day online bookings — please call the office and we’ll do our best to fit you in.`;
+      if(box){ box.textContent = msg; box.style.display='block'; }
+      else { alert(msg); }
+      return;
+    }
     // Payment step: charge the card + save the booking, then finish
     if(STEPS[step].id==='payment'){ await handlePayment(); return; }
     step=Math.min(step+1,STEPS.length-1);
