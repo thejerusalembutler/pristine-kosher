@@ -877,12 +877,20 @@ async function handlePayment(){
         headers:{ apikey:SUPABASE_KEY, Authorization:`Bearer ${SUPABASE_KEY}`, 'Content-Type':'application/json' },
         body: JSON.stringify({ action:'confirmation', booking_id:bookingId })
       }).catch(()=>{});
-      // push the booking into Workiz (fire-and-forget; booking is already saved).
-      // If Workiz is down, the booking is safe here and can be re-synced from the dashboard.
+      // push the booking into Workiz (booking is already saved; safe if Workiz is down).
+      // Then mirror the $100 deposit onto the Workiz job once it exists.
       fetch(`${SUPABASE_URL}/functions/v1/workiz-push-job`, {
         method:'POST',
         headers:{ apikey:SUPABASE_KEY, Authorization:`Bearer ${SUPABASE_KEY}`, 'Content-Type':'application/json' },
         body: JSON.stringify({ booking_id:bookingId })
+      }).then(r=>r.json()).then(pj=>{
+        if(pj && pj.workiz_job_id){
+          fetch(`${SUPABASE_URL}/functions/v1/workiz-push-payment`, {
+            method:'POST',
+            headers:{ apikey:SUPABASE_KEY, Authorization:`Bearer ${SUPABASE_KEY}`, 'Content-Type':'application/json' },
+            body: JSON.stringify({ booking_id:bookingId, event:'deposit', amount:100 })
+          }).catch(()=>{});
+        }
       }).catch(()=>{});
     }
     done=true; render();

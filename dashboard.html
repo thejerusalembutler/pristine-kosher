@@ -543,6 +543,14 @@ async function patchBooking(id, body){
     headers:{'Content-Type':'application/json',apikey:SUPABASE_KEY,Authorization:`Bearer ${localStorage.getItem("pk_staff_token")||SUPABASE_KEY}`,'Prefer':'return=minimal'},
     body:JSON.stringify(body)});
 }
+// Mirror a money event onto the matching Workiz job (fire-and-forget; guarded against duplicates server-side).
+function mirrorPaymentToWorkiz(bookingId, event, amount, method){
+  fetch(`${SUPABASE_URL}/functions/v1/workiz-push-payment`,{
+    method:'POST',
+    headers:{ apikey:SUPABASE_KEY, Authorization:`Bearer ${SUPABASE_KEY}`, 'Content-Type':'application/json' },
+    body: JSON.stringify({ booking_id:bookingId, event, amount, method })
+  }).catch(()=>{});
+}
 window.recordOffline = async (id, btn)=>{
   const amt=+document.getElementById(`offAmt-${id}`).value;
   const method=document.getElementById(`offMethod-${id}`).value;
@@ -550,6 +558,7 @@ window.recordOffline = async (id, btn)=>{
   const b=bookings.find(x=>x.id===id); const cur=+(b._raw.offline_paid||0);
   await patchBooking(id,{offline_paid:cur+amt,offline_method:method});
   b._raw.offline_paid=cur+amt; b._raw.offline_method=method;
+  mirrorPaymentToWorkiz(id,'offline',amt,method);
   openBooking(id);
 };
 window.applyDiscount = async (id, btn)=>{
@@ -558,6 +567,7 @@ window.applyDiscount = async (id, btn)=>{
   const b=bookings.find(x=>x.id===id);
   await patchBooking(id,{discount_type:type,discount_value:val});
   b._raw.discount_type=type; b._raw.discount_value=val;
+  if(val>0) mirrorPaymentToWorkiz(id,'discount',val,type);
   openBooking(id);
 };
 
@@ -578,6 +588,7 @@ window.chargeBalance = async (bookingId, btn) => {
       // update local copy so the drawer reflects it
       const b = bookings.find(x=>x.id===bookingId);
       if(b && b._raw) b._raw.balance_charged = (+b._raw.balance_charged||0) + data.amount;
+      mirrorPaymentToWorkiz(bookingId,'balance',data.amount);
       setTimeout(()=>openBooking(bookingId), 1200);
     } else {
       btn.textContent = '✕ '+(data.error||'Failed'); btn.disabled=false;
