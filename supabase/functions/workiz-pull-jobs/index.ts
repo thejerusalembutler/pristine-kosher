@@ -57,6 +57,17 @@ function teamName(j: WJob): string | null {
   return j.Team && j.Team.length ? j.Team[0].Name : null;
 }
 
+// Map a Workiz job status onto the app's booking status.
+// Workiz statuses seen: "Submitted", "Done", "Cancelled", etc.
+function mapStatus(workizStatus?: string): string | null {
+  const s = (workizStatus || "").toLowerCase();
+  if (!s) return null;
+  if (s.includes("done") || s.includes("complete")) return "done";
+  if (s.includes("cancel")) return "declined";
+  if (s.includes("submitted") || s.includes("pending") || s.includes("new")) return "confirmed";
+  return null; // unknown status -> leave the app's status alone
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
@@ -72,7 +83,7 @@ Deno.serve(async (req) => {
       // find a booking already tied to this Workiz job
       const { data: existing } = await sb
         .from("bookings")
-        .select("id,service_date,time_slot,assigned_worker_id,ai_locked")
+        .select("id,service_date,time_slot,assigned_worker_id,ai_locked,status")
         .eq("workiz_job_id", j.UUID)
         .maybeSingle();
 
@@ -91,17 +102,27 @@ Deno.serve(async (req) => {
           if (w && w.id !== existing.assigned_worker_id) { workerChanged = true; appWorkerId = w.id; }
         }
 
-        if (scheduleChanged || workerChanged) {
-          const reason = [scheduleChanged ? "schedule" : null, workerChanged ? "worker" : null]
+        // did the status change in Workiz? (e.g. marked "Done")
+        const newStatus = mapStatus(j.Status);
+        const statusChanged = newStatus !== null && newStatus !== (existing.status ?? null);
+
+        if (scheduleChanged || workerChanged || statusChanged) {
+          const reason = [scheduleChanged ? "schedule" : null, workerChanged ? "worker" : null, statusChanged ? "status" : null]
             .filter(Boolean).join("+");
           if (!dryRun) {
-            await sb.from("bookings").update({
+            const patch: Record<string, unknown> = {
               service_date: date ?? existing.service_date,
               time_slot: time ?? existing.time_slot,
               assigned_worker_id: appWorkerId,
-              ai_locked: true,
-              ai_locked_reason: `workiz-edit: ${reason}`,
-            }).eq("id", existing.id);
+            };
+            if (statusChanged) patch.status = newStatus;
+            // schedule/worker edits lock the job; a pure status change (e.g. "Done") does NOT
+            // need to lock it, but if it was already locked we leave it locked.
+            if (scheduleChanged || workerChanged) {
+              patch.ai_locked = true;
+              patch.ai_locked_reason = `workiz-edit: ${reason}`;
+            }
+            await sb.from("bookings").update(patch).eq("id", existing.id);
           }
           locked++;
         } else {
