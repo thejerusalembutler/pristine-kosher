@@ -28,6 +28,7 @@ type WJob = {
   Address?: string; City?: string; State?: string; PostalCode?: string;
   Latitude?: number; Longitude?: number;
   JobTotalPrice?: number;
+  JobAmountDue?: number;        // negative or reduced when a payment was taken in Workiz
   Team?: { id: number; Name: string }[];
 };
 
@@ -83,12 +84,30 @@ Deno.serve(async (req) => {
       // find a booking already tied to this Workiz job
       const { data: existing } = await sb
         .from("bookings")
-        .select("id,service_date,time_slot,assigned_worker_id,ai_locked,status")
+        .select("id,service_date,time_slot,assigned_worker_id,ai_locked,status,workiz_collected,workiz_extra_paid")
         .eq("workiz_job_id", j.UUID)
         .maybeSingle();
 
       if (existing) {
         matched++;
+
+        // --- Reverse payment sync: detect a payment taken IN Workiz ---
+        // Workiz's "collected so far" = total price minus what's still due.
+        // If that rises above what we last saw, someone recorded a payment in Workiz.
+        const total = Number(j.JobTotalPrice ?? 0);
+        const due = Number(j.JobAmountDue ?? 0);
+        const workizCollectedNow = total - due;               // e.g. total 0, due -100 => 100 collected
+        const lastSeen = Number(existing.workiz_collected ?? 0);
+        if (!dryRun && workizCollectedNow > lastSeen + 0.005) {
+          const delta = workizCollectedNow - lastSeen;        // the new payment amount
+          await sb.from("bookings").update({
+            workiz_collected: workizCollectedNow,
+            workiz_extra_paid: Number(existing.workiz_extra_paid ?? 0) + delta,
+          }).eq("id", existing.id);
+        } else if (!dryRun && Math.abs(workizCollectedNow - lastSeen) > 0.005) {
+          // collected went down (refund/adjustment) — just keep the baseline current
+          await sb.from("bookings").update({ workiz_collected: workizCollectedNow }).eq("id", existing.id);
+        }
         // did the schedule change in Workiz vs. what the app has?
         const scheduleChanged =
           (date && date !== (existing.service_date ?? null)) ||

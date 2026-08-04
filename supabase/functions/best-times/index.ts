@@ -61,18 +61,28 @@ Deno.serve(async (req)=>{
       return { slot:key, minutes:m, score, nearestMi: best===999?null:Math.round(best*10)/10 };
     });
 
-    // recommend the top few slots with a real nearby worker; if none, spread across the day
+    // Recommend the GENUINELY good slots (a nearby worker is around), best first,
+    // up to 8. If only a few are good, show only those — don't pad with mediocre times.
+    const MAX_SUGGESTIONS = 8;
     const withWorker = scored.filter(s=>s.score>0).sort((a,b)=>b.score-a.score);
+
     let recommended:string[];
-    if(withWorker.length>=3){
-      recommended = withWorker.slice(0,4).map(s=>s.slot);
+    let curated = true;   // true = these are real, worker-based recommendations
+    if(withWorker.length>0){
+      // real recommendations — show however many are good, capped at 8
+      recommended = withWorker.slice(0,MAX_SUGGESTIONS).map(s=>s.slot);
     } else {
-      // no nearby routing yet: recommend a spread of daytime slots
+      // No routing data yet (empty schedule / early season): no slot is "better" than
+      // another, so offer a small even spread of convenient daytime starting times.
+      curated = false;
       const spread = scored.filter(s=>s.minutes>=9*60 && s.minutes<=18*60);
-      recommended = spread.filter((_,i)=>i%Math.ceil(spread.length/4)===0).slice(0,4).map(s=>s.slot);
+      const step = Math.max(1, Math.floor(spread.length/6));
+      recommended = spread.filter((_,i)=>i%step===0).slice(0,6).map(s=>s.slot);
     }
 
-    return json({ date, recommended, allSlots: slots.map(hhmm) });
+    // curated=true means the times are AI-picked around real nearby jobs;
+    // curated=false means they're generic starting suggestions (no routing data yet).
+    return json({ date, recommended, curated, allSlots: slots.map(hhmm) });
   }catch(e){ return json({error:String(e)},500); }
 });
 function json(b:unknown,s=200){ return new Response(JSON.stringify(b),{status:s,headers:{...cors,"Content-Type":"application/json"}}); }

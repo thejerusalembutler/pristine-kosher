@@ -77,6 +77,14 @@ Deno.serve(async (req) => {
       booking_id, event_key: eventKey, workiz_payment_id: String(r.paymentId ?? ""), amount: workizAmount,
     });
 
+    // Keep the reverse-sync baseline current: this app-originated payment just
+    // raised Workiz's "collected" total, so bump workiz_collected by the same amount.
+    // (A positive payment; discounts are negative and reduce collected.)
+    const { data: cur } = await sb.from("bookings").select("workiz_collected").eq("id", booking_id).single();
+    await sb.from("bookings").update({
+      workiz_collected: Number(cur?.workiz_collected ?? 0) + workizAmount,
+    }).eq("id", booking_id);
+
     return json({ ok: true, eventKey, workiz_payment_id: r.paymentId, amount: workizAmount });
   } catch (e) {
     return json({ error: String(e) }, 500);
