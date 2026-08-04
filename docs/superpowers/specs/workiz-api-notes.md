@@ -76,3 +76,15 @@ Success → `{"flag":true,"msg":"Job deleted"}`
 - Stage 2 pull run LIVE: 98 real Workiz jobs now in the app, all with workiz_job_id,
   ai_locked=true (came from Workiz), and Workiz lat/lng (no Google geocode).
 - Workiz has ~100 jobs total (page 2 empty). `records` max = 100/page.
+
+## Payments (Stage 4 — verified working)
+- Endpoint: POST /api/v1/{TOKEN}/job/addpayment/
+  body: { auth_secret, uuid, amount, type, date:"YYYY-MM-DD HH:MM:SS" }
+  success -> { flag:true, data:{ paymentId } }. Negative amount = discount/adjustment.
+- No delete-payment endpoint found in v1; reverse with an offsetting negative payment.
+- Idempotency via workiz_payment_log unique(booking_id, event_key).
+- job/update/ exists (POST, needs uuid). job/create, job/delete verified earlier.
+
+## Blocked on v1 (need v2 keys later)
+- Call logs & SMS logs: no v1 endpoint exists; v1 keys are rejected by v2 (/crm/api/v2).
+  Stage 3 (comms history in CRM) waits until v2 credentials are available.
