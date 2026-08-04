@@ -213,6 +213,8 @@ $('#submit').addEventListener('click',async()=>{
   try{
     const res=await fetch(`${SUPABASE_URL}/rest/v1/bookings`,{method:'POST',headers:{...H(),'Prefer':'return=minimal'},body:JSON.stringify(rec)});
     if(!res.ok){ msg.className='msg err'; msg.textContent='Could not create booking ('+res.status+').'; $('#submit').disabled=false; $('#submit').textContent='Create booking'; return; }
+    // push the new booking into Workiz (fire-and-forget; booking is already saved)
+    fetch(`${SUPABASE_URL}/functions/v1/workiz-push-job`,{method:'POST',headers:{...H(),'Content-Type':'application/json'},body:JSON.stringify({booking_id:rec.id})}).catch(()=>{});
     $('#page').innerHTML=`<div class="success"><div class="big"><svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
       <h1>Booking created</h1><p class="lead">${name} · $${total()} estimate${paidAmt?` · $${paidAmt} ${paidMethod} recorded`:''}.</p>
       <button class="btn" onclick="location.reload()">Book another</button>

@@ -82,6 +82,10 @@
   .pill.confirmed,.pill.approved{background:var(--teal-soft);color:var(--teal-dark)}
   .pill.declined{background:color-mix(in srgb,var(--red) 16%,transparent);color:var(--red)}
   .pill.pending{background:var(--mist);color:var(--muted)}
+  .syncb{font-size:10.5px;font-weight:600;padding:1px 6px;border-radius:6px;margin-left:6px;white-space:nowrap}
+  .syncb.ok{background:var(--teal-soft);color:var(--teal-dark)}
+  .syncb.err{background:color-mix(in srgb,var(--orange) 16%,transparent);color:var(--orange)}
+  .syncb.pend{background:var(--mist);color:var(--muted)}
   .attn{width:7px;height:7px;border-radius:50%;background:var(--orange);flex:none}
 
   .empty{padding:40px 20px;text-align:center;color:var(--muted);font-size:13.5px}
@@ -258,6 +262,9 @@ function fromDb(r){
     assignedWorkerId: r.assigned_worker_id || null,
     lat: r.lat, lng: r.lng,
     jobNumber: r.job_number,
+    workizId: r.workiz_job_id || null,
+    syncStatus: r.workiz_sync_status || 'pending',
+    aiLocked: r.ai_locked === true,
     _raw: r    // keep the full row for hours/cash roll-up
   };
 }
@@ -422,6 +429,13 @@ function renderTiles(){
 }
 
 /* ---------------- Bookings list ---------------- */
+// Small Workiz sync badge shown on each booking row.
+function syncBadge(b){
+  if(b.workizId || b.syncStatus==='synced') return '<span class="syncb ok" title="In Workiz">✓ Workiz</span>';
+  if(b.syncStatus==='error') return '<span class="syncb err" title="Failed to sync to Workiz — click the booking to resync">⚠ not synced</span>';
+  return '<span class="syncb pend" title="Syncing to Workiz…">⏳ syncing</span>';
+}
+
 function renderBookings(){
   let list = bookings.slice();
   if(bkFilter==='attn') list = list.filter(b=>ATTN_BOOKING(b.status));
@@ -430,8 +444,8 @@ function renderBookings(){
     <div class="row" data-bk="${b.id}">
       <div class="ravatar">${initials(b.name)}</div>
       <div class="rmain">
-        <div class="rtitle">${ATTN_BOOKING(b.status)?'<span class="attn"></span> ':''}${b.jobNumber?`<span style="color:var(--muted);font-weight:600">#${b.jobNumber}</span> `:''}${esc(b.name)}</div>
-        <div class="rsub">${esc(b.market)} · ${fmtDate(b.date)} ${esc(b.time)}</div>
+        <div class="rtitle">${ATTN_BOOKING(b.status)?'<span class="attn"></span> ':''}${b.jobNumber?`<span style="color:var(--muted);font-weight:600">#${b.jobNumber}</span> `:''}${esc(b.name)}${b.aiLocked?' <span title="Changed in Workiz — the AI won\'t move this job">🔒</span>':''}</div>
+        <div class="rsub">${esc(b.market)} · ${fmtDate(b.date)} ${esc(b.time)} ${syncBadge(b)}</div>
       </div>
       <div class="rright">
         <span class="ramt">$${b.est}</span>
@@ -648,6 +662,31 @@ window.recalcRoutes = async (btn) => {
 };
 
 /* ---------------- Drawer: booking ---------------- */
+// Workiz sync section in the drawer: shows status, resync + unlock buttons.
+function workizSection(b){
+  const status = b.workizId
+    ? `<span class="v"><span class="syncb ok">✓ In Workiz</span> <span style="color:var(--muted);font-size:12px">${esc(b.workizId)}</span></span>`
+    : (b.syncStatus==='error'
+        ? `<span class="v"><span class="syncb err">⚠ Not synced</span></span>`
+        : `<span class="v"><span class="syncb pend">⏳ Syncing…</span></span>`);
+  let html = `<div class="drow"><span class="k">Status</span>${status}</div>`;
+  if(!b.workizId){
+    html += `<div class="drow"><span class="k"></span><span class="v"><button class="btn secondary" style="flex:none;padding:8px 14px" onclick="resyncWorkiz('${b.id}')">Resync to Workiz</button></span></div>`;
+  }
+  if(b.aiLocked){
+    html += `<div class="drow"><span class="k">🔒 Locked</span><span class="v">Changed in Workiz — the AI won't move this job.<br><button class="btn secondary" style="flex:none;padding:8px 14px;margin-top:6px" onclick="unlockJob('${b.id}')">Unlock — let AI reschedule</button></span></div>`;
+  }
+  return html;
+}
+window.resyncWorkiz=async(id)=>{
+  await fetch(`${SUPABASE_URL}/functions/v1/workiz-push-job`,{method:'POST',headers:{apikey:SUPABASE_KEY,Authorization:`Bearer ${SUPABASE_KEY}`,'Content-Type':'application/json'},body:JSON.stringify({booking_id:id})});
+  await loadBookings(); renderAll(); openBooking(id);
+};
+window.unlockJob=async(id)=>{
+  await fetch(`${SUPABASE_URL}/rest/v1/bookings?id=eq.${id}`,{method:'PATCH',headers:{apikey:SUPABASE_KEY,Authorization:`Bearer ${localStorage.getItem('pk_staff_token')||SUPABASE_KEY}`,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({ai_locked:false,ai_locked_reason:null})});
+  await loadBookings(); renderAll(); openBooking(id);
+};
+
 function openBooking(id){
   const b = bookings.find(x=>x.id===id);
   const resolved = !ATTN_BOOKING(b.status);
@@ -670,6 +709,8 @@ function openBooking(id){
       <div class="drow"><span class="k">Time</span><span class="v">${esc(b.time)} · ${b.flex==='exact'?'exact':'±1 hr flexible'}</span></div>
       <div class="dsec">Worker assignment</div>
       ${assignmentSection(b)}
+      <div class="dsec">Workiz sync</div>
+      ${workizSection(b)}
       <div class="dsec">Customer</div>
       <div class="drow"><span class="k">Phone</span><span class="v">${esc(b.phone)}</span></div>
       <div class="drow"><span class="k">Address</span><span class="v">${esc(b.address)}</span></div>

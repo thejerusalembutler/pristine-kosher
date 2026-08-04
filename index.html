@@ -877,6 +877,13 @@ async function handlePayment(){
         headers:{ apikey:SUPABASE_KEY, Authorization:`Bearer ${SUPABASE_KEY}`, 'Content-Type':'application/json' },
         body: JSON.stringify({ action:'confirmation', booking_id:bookingId })
       }).catch(()=>{});
+      // push the booking into Workiz (fire-and-forget; booking is already saved).
+      // If Workiz is down, the booking is safe here and can be re-synced from the dashboard.
+      fetch(`${SUPABASE_URL}/functions/v1/workiz-push-job`, {
+        method:'POST',
+        headers:{ apikey:SUPABASE_KEY, Authorization:`Bearer ${SUPABASE_KEY}`, 'Content-Type':'application/json' },
+        body: JSON.stringify({ booking_id:bookingId })
+      }).catch(()=>{});
     }
     done=true; render();
   }catch(e){
