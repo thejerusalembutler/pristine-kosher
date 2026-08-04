@@ -100,6 +100,12 @@ what was booked, the price, the assigned worker, and every payment/adjustment.
 Workiz so that jobs created directly in Workiz are visible to AI scheduling and dispatch. This is
 read-only on the app side.
 
+**Cost-saver (confirmed from real Workiz data):** Workiz already returns `Latitude`/`Longitude`
+on each job. For any job pulled from Workiz, use those coordinates directly instead of re-geocoding
+the address with Google — only fall back to Google geocoding if Workiz's coordinates are missing.
+This avoids paying Google to geocode addresses Workiz has already located, which matters at crunch
+volume (hundreds of jobs).
+
 ---
 
 ## The matching problem (most important detail)
